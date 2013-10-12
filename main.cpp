@@ -4,6 +4,8 @@
 
 using namespace std;
 
+int Node::sTabs = 0;
+
 extern int yyparse();
 extern NBlock* programBlock;
 
@@ -12,7 +14,7 @@ extern NBlock* programBlock;
 int main(int argc, char **argv)
 {
 	yyparse();
-	std::cout << programBlock << endl;
+	std::cout << *programBlock << endl;
     // see http://comments.gmane.org/gmane.comp.compilers.llvm.devel/33877
 /*	InitializeNativeTarget();
 	CodeGenContext context;

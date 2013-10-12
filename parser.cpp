@@ -69,8 +69,8 @@
 #line 1 "parser.y"
 
 #include "node.h"
-        #include <cstdio>
-        #include <cstdlib>
+#include <cstdio>
+#include <cstdlib>
 NBlock *programBlock; /* the top level root node of our final AST */
 
 extern int yylex();
