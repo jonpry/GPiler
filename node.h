@@ -2,6 +2,15 @@
 #include <vector>
 #include <llvm/Value.h>
 
+class Node;
+class NBlock;
+class NExpression;
+class NStatement;
+class NIdentifier;
+class NVariableDeclaration;
+
+#include "parser.hpp"
+
 using namespace std;
 
 class CodeGenContext;
@@ -93,7 +102,20 @@ public:
 	lhs(lhs), rhs(rhs), op(op) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
-	void print(ostream& os) { os << "Binary Op: " << op << "\n"; }
+	void print(ostream& os) { 
+		os << "Binary Op: ";
+		switch(op){
+			case TPLUS:	os << "+\n"; break;
+			case TMINUS: 	os << "-\n"; break;
+			case TMUL:	os << "*\n"; break;
+			case TDIV:	os << "/\n"; break;
+			default:	os << "unknown op\n"; break; 
+		}
+		sTabs++;
+		os << lhs;
+		os << rhs;
+		sTabs--;
+	}
 };
 
 class NAssignment : public NExpression {
@@ -147,10 +169,12 @@ public:
 	type(type), id(id), assignmentExpr(assignmentExpr) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
-		os << "Variable decleration:\n"; 
+		os << "Variable decl:\n"; 
 		sTabs++;
 		os << (Node&)type;
 		os << id;
+		if(assignmentExpr)
+			os << *assignmentExpr;
 		sTabs--;
 	}
 };
