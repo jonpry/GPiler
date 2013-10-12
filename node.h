@@ -36,7 +36,7 @@ public:
     		return os;
 	}
 
-	static int sTabs;
+	static int sTabs;  
 };
 
 class NExpression : public Node {

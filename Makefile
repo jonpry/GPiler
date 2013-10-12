@@ -12,15 +12,15 @@ LIBS = `llvm-config-3.0 --libs`
 clean:
 	$(RM) -rf parser.cpp parser.hpp parser tokens.cpp $(OBJS)
 
-parser.cpp: parser.y
-	bison -d -o $@ $^
+parser.cpp: parser.y node.h 
+	bison -d -o $@ $<
 
 parser.hpp: parser.cpp
 
 tokens.cpp: tokens.l parser.hpp
 	flex -o $@ $^
 
-%.o: %.cpp
+%.o: %.cpp node.h
 	g++ -c $(CPPFLAGS) -o $@ $<
 
 
