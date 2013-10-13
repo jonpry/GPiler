@@ -46,7 +46,7 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 
 /* Operator precedence for mathematical operators */
 %left TPLUS TMINUS
-%left TCEQ TCNEQ TCLT TCGT TCLE TCGE
+%left TCEQ TCNE TCLT TCGT TCLE TCGE
 %left TMUL TDIV
 
 %start program
@@ -96,6 +96,7 @@ expr :  ident { $<ident>$ = $1; }
 	| numeric
   	| expr TCEQ expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
   	| expr TCNE expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+  	| expr TCGT expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
   	| expr TCLT expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
   	| expr TCLE expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
   	| expr TCGE expr { $$ = new NBinaryOperator(*$1, $2, *$3); }

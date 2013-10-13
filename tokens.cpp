@@ -1930,8 +1930,7 @@ void yyfree (void * ptr )
      TPLUS = 274,
      TMINUS = 275,
      TMUL = 276,
-     TDIV = 277,
-     TCNEQ = 278
+     TDIV = 277
    };
 #endif
 
@@ -1958,7 +1957,7 @@ typedef union YYSTYPE
 
 
 /* Line 2068 of yacc.c  */
-#line 88 "parser.hpp"
+#line 87 "parser.hpp"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
