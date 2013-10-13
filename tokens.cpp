@@ -1930,7 +1930,8 @@ void yyfree (void * ptr )
      TPLUS = 274,
      TMINUS = 275,
      TMUL = 276,
-     TDIV = 277
+     TDIV = 277,
+     TCNEQ = 278
    };
 #endif
 
@@ -1943,21 +1944,21 @@ typedef union YYSTYPE
 /* Line 2068 of yacc.c  */
 #line 12 "parser.y"
 
-Node *node;
-NBlock *block;
-NExpression *expr;
-NStatement *stmt;
-NIdentifier *ident;
-NVariableDeclaration *var_decl;
-std::vector<NVariableDeclaration*> *varvec;
-std::vector<NExpression*> *exprvec;
-std::string *string;
-int token;
+	Node *node;
+	NBlock *block;
+	NExpression *expr;
+	NStatement *stmt;
+	NIdentifier *ident;
+	NVariableDeclaration *var_decl;
+	std::vector<NVariableDeclaration*> *varvec;
+	std::vector<NExpression*> *exprvec;
+	std::string *string;
+	int token;
 
 
 
 /* Line 2068 of yacc.c  */
-#line 87 "parser.hpp"
+#line 88 "parser.hpp"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
