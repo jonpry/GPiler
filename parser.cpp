@@ -1501,35 +1501,14 @@ yyreduce:
 
 /* Line 1806 of yacc.c  */
 #line 72 "parser.y"
-    { (yyval.block) = new NBlock(); (yyval.block)->statements.push_back((yyvsp[(1) - (1)].stmt)); }
+    { (yyval.block) = new NBlock(); (yyval.block)->expressions.push_back((yyvsp[(1) - (1)].expr)); }
     break;
 
   case 6:
 
 /* Line 1806 of yacc.c  */
 #line 73 "parser.y"
-    { (yyvsp[(1) - (2)].block)->statements.push_back((yyvsp[(2) - (2)].stmt)); }
-    break;
-
-  case 8:
-
-/* Line 1806 of yacc.c  */
-#line 77 "parser.y"
-    { (yyval.stmt) = new NExpressionStatement(*(yyvsp[(1) - (2)].expr)); }
-    break;
-
-  case 9:
-
-/* Line 1806 of yacc.c  */
-#line 78 "parser.y"
-    { (yyval.stmt) = new NExpressionStatement(*(yyvsp[(1) - (2)].expr)); }
-    break;
-
-  case 10:
-
-/* Line 1806 of yacc.c  */
-#line 79 "parser.y"
-    { (yyval.stmt) = new NExpressionStatement(*(yyvsp[(1) - (2)].expr)); }
+    { (yyvsp[(1) - (2)].block)->expressions.push_back((yyvsp[(2) - (2)].expr)); }
     break;
 
   case 11:
@@ -1592,21 +1571,21 @@ yyreduce:
 
 /* Line 1806 of yacc.c  */
 #line 101 "parser.y"
-    { (yyval.stmt) = new NVariableDeclaration(*(yyvsp[(1) - (2)].type), *(yyvsp[(2) - (2)].ident)); }
+    { (yyval.expr) = new NVariableDeclaration(*(yyvsp[(1) - (2)].type), *(yyvsp[(2) - (2)].ident)); }
     break;
 
   case 20:
 
 /* Line 1806 of yacc.c  */
 #line 102 "parser.y"
-    { (yyval.stmt) = new NVariableDeclaration(*(yyvsp[(1) - (4)].type), *(yyvsp[(2) - (4)].ident), (yyvsp[(4) - (4)].expr)); }
+    { (yyval.expr) = new NVariableDeclaration(*(yyvsp[(1) - (4)].type), *(yyvsp[(2) - (4)].ident), (yyvsp[(4) - (4)].expr)); }
     break;
 
   case 21:
 
 /* Line 1806 of yacc.c  */
 #line 105 "parser.y"
-    { (yyval.stmt) = new NVariableDeclaration(*(yyvsp[(1) - (2)].type), *(yyvsp[(2) - (2)].ident)); }
+    { (yyval.expr) = new NVariableDeclaration(*(yyvsp[(1) - (2)].type), *(yyvsp[(2) - (2)].ident)); }
     break;
 
   case 22:
@@ -1794,7 +1773,7 @@ yyreduce:
 
 
 /* Line 1806 of yacc.c  */
-#line 1798 "parser.cpp"
+#line 1777 "parser.cpp"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires

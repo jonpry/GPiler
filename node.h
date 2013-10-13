@@ -168,34 +168,23 @@ public:
 class NBlock : public NExpression {
 public:
 	StatementList statements;
+	ExpressionList expressions;
 	NBlock() { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Block: \n"; 
-		StatementList::iterator it;
 		sTabs++;
-		for(it = statements.begin(); it!= statements.end(); it++){
+		for(StatementList::iterator it = statements.begin(); it!= statements.end(); it++){
+			os << **it;
+		}
+		for(ExpressionList::iterator it = expressions.begin(); it!= expressions.end(); it++){
 			os << **it;
 		}
 		sTabs--;
 	}
 };
 
-class NExpressionStatement : public NStatement {
-public:
-	NExpression& expression;
-	NExpressionStatement(NExpression& expression) :
-	expression(expression) { }
-	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { 
-		os << "Expression statement:\n"; 
-		sTabs++;
-		os << expression;
-		sTabs--;
-	}
-};
-
-class NVariableDeclaration : public NStatement {
+class NVariableDeclaration : public NExpression {
 public:
 	const NType& type;
 	NIdentifier& id;

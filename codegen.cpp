@@ -123,20 +123,17 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 
 Value* NBlock::codeGen(CodeGenContext& context)
 {
-	StatementList::const_iterator it;
 	Value *last = NULL;
-	for (it = statements.begin(); it != statements.end(); it++) {
+	for (StatementList::const_iterator it = statements.begin(); it != statements.end(); it++) {
+		std::cout << "Generating code for " << typeid(**it).name() << endl;
+		last = (**it).codeGen(context);
+	}
+	for (ExpressionList::const_iterator it = expressions.begin(); it != expressions.end(); it++) {
 		std::cout << "Generating code for " << typeid(**it).name() << endl;
 		last = (**it).codeGen(context);
 	}
 	std::cout << "Creating block" << endl;
 	return last;
-}
-
-Value* NExpressionStatement::codeGen(CodeGenContext& context)
-{
-	std::cout << "Generating code for " << typeid(expression).name() << endl;
-	return expression.codeGen(context);
 }
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)

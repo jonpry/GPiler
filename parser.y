@@ -44,13 +44,13 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
  */
 %type <ident> ident 
 %type <type> type
-%type <expr> numeric expr assignment func_call pipeline
+%type <expr> numeric expr assignment func_call pipeline stmt var_decl func_decl_arg 
 %type <varvec> func_decl_args
 %type <exprvec> call_args
 %type <pipevec> pipeline_chain
 %type <fvarvec> functional_vars
 %type <block> program stmts block func_decls
-%type <stmt> stmt var_decl func_decl func_decl_arg 
+%type <stmt> func_decl 
 %type <map> map
 
 /* Operator precedence for mathematical operators */
@@ -69,14 +69,14 @@ func_decls : func_decl { $$ = new NBlock(); $$->statements.push_back($<stmt>1); 
 	| func_decls func_decl { $1->statements.push_back($<stmt>2); }
 	;
 
-stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
-	| stmts stmt { $1->statements.push_back($<stmt>2); }
+stmts : stmt { $$ = new NBlock(); $$->expressions.push_back($<expr>1); }
+	| stmts stmt { $1->expressions.push_back($<expr>2); }
 	;
 
 stmt : var_decl TSEMI
-	| assignment TSEMI { $$ = new NExpressionStatement(*$1); }
-	| func_call TSEMI { $$ = new NExpressionStatement(*$1); }
-	| pipeline TSEMI { $$ = new NExpressionStatement(*$1); }
+	| assignment TSEMI 
+	| func_call TSEMI 
+	| pipeline TSEMI 
      	;
 
 pipeline : ident TDCOLON pipeline_chain TCGT ident {$$ = new NPipeLine(*$1,*$5,*$3); }
