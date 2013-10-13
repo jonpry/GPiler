@@ -10,16 +10,16 @@ void CodeGenContext::generateCode(NBlock& root)
 	std::cout << "Generating code...\n";
 
 	/* Create the top level interpreter function to call as entry */
-	vector<Type*> argTypes;
-	FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), makeArrayRef(argTypes), false);
-	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
-	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mainFunction, 0);
+//	vector<Type*> argTypes;
+//	FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), makeArrayRef(argTypes), false);
+//	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
+//	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mainFunction, 0);
 
 	/* Push a new variable/block context */
-	pushBlock(bblock);
+//	pushBlock(bblock);
 	root.codeGen(*this); /* emit bytecode for the toplevel block */
-	ReturnInst::Create(getGlobalContext(), bblock);
-	popBlock();
+//	ReturnInst::Create(getGlobalContext(), bblock);
+//	popBlock();
 
 	/* Print the bytecode in a human-readable format
 	to see if our program compiled properly
@@ -41,7 +41,7 @@ GenericValue CodeGenContext::runCode() {
 }
 
 /* Returns an LLVM type based on the identifier */
-static Type *typeOf(const NIdentifier& type)
+static Type *typeOf(const NType& type)
 {
 	if (type.name.compare("int") == 0) {
 		return Type::getInt64Ty(getGlobalContext());
@@ -73,7 +73,6 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << name << endl;
 		return NULL;
 	}
-	std:cout << "Found it\n";
 	return new LoadInst(context.locals()[name], "", false, context.currentBlock());
 }
 
@@ -164,6 +163,9 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 
 	context.pushBlock(bblock);
+
+	if(id.name == "main")
+		context.mainFunction = function;
 
   	// Set names for all arguments.
 	Function::arg_iterator AI;

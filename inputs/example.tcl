@@ -1,8 +1,10 @@
-int do_math(int a) {
-	echo(a)
-  	int x = a * 5 + 3
-	echo(x)
+int do_math(int a, int b, int c) {
+	echo(a);
+  	int x = a * 5 + 3;
+	echo(x);
 }
 
-do_math(10)
-echo(15)
+int main(){
+	do_math(10,12,13);
+	echo(15);
+}

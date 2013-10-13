@@ -31,9 +31,9 @@ public:
 
 class CodeGenContext {
     std::stack<CodeGenBlock *> blocks;
-    Function *mainFunction;
 
 public:
+    Function *mainFunction;
     Module *module;
     CodeGenContext() { module = new Module("main", getGlobalContext()); }
     

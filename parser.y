@@ -15,6 +15,7 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 	NExpression *expr;
 	NStatement *stmt;
 	NIdentifier *ident;
+	NType *type;
 	NVariableDeclaration *var_decl;
 	std::vector<NVariableDeclaration*> *varvec;
 	std::vector<NExpression*> *exprvec;
@@ -29,7 +30,8 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 %token <string> TIDENTIFIER TINTEGER TDOUBLE
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
-%token <token> TPLUS TMINUS TMUL TDIV
+%token <token> TPLUS TMINUS TMUL TDIV 
+%token <token> TSEMI TLBRACK TRBRACK
 
 
 /* Define the type of node our nonterminal symbols represent.
@@ -37,12 +39,13 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
    we call an ident (defined by union type ident) we are really
    calling an (NIdentifier*). It makes the compiler happy.
  */
-%type <ident> ident
+%type <ident> ident 
+%type <type> type
 %type <expr> numeric expr assignment func_call
 %type <varvec> func_decl_args
 %type <exprvec> call_args
-%type <block> program stmts block
-%type <stmt> stmt var_decl func_decl
+%type <block> program stmts block func_decls
+%type <stmt> stmt var_decl func_decl func_decl_arg 
 
 /* Operator precedence for mathematical operators */
 %left TPLUS TMINUS
@@ -53,34 +56,44 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 
 %%
 
-program : stmts { programBlock = $1; }
+program : func_decls { programBlock = $1; }
+	;
+
+func_decls : func_decl { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
+	| func_decls func_decl { $1->statements.push_back($<stmt>2); }
 	;
 
 stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
 	| stmts stmt { $1->statements.push_back($<stmt>2); }
 	;
 
-stmt : var_decl 
-	| func_decl
-	| assignment { $$ = new NExpressionStatement(*$1); }
-	| func_call { $$ = new NExpressionStatement(*$1); }
+stmt : var_decl TSEMI
+	| assignment TSEMI { $$ = new NExpressionStatement(*$1); }
+	| func_call TSEMI { $$ = new NExpressionStatement(*$1); }
      	;
 
 block : TLBRACE stmts TRBRACE { $$ = $2; }
 	| TLBRACE TRBRACE { $$ = new NBlock(); }
 	;
 
-var_decl : ident ident { $$ = new NVariableDeclaration(*$1, *$2); }
-	| ident ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
+var_decl : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
+	| type ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
 	;
 
-func_decl : ident ident TLPAREN func_decl_args TRPAREN block
+func_decl_arg : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
+	;
+ 
+func_decl : type ident TLPAREN func_decl_args TRPAREN block
 	{ $$ = new NFunctionDeclaration(*$1, *$2, *$4, *$6); delete $4; }
 	;
 
+type : TIDENTIFIER { $$ = new NType(*$1,0); delete $1; }
+	| TLBRACK TIDENTIFIER TRBRACK { $$ = new NType(*$2,1); delete $2; }
+	;
+
 func_decl_args : /*blank*/ { $$ = new VariableList(); }
-	| var_decl { $$ = new VariableList(); $$->push_back($<var_decl>1); }
-	| func_decl_args TCOMMA var_decl { $1->push_back($<var_decl>3); }
+	| func_decl_arg { $$ = new VariableList(); $$->push_back($<var_decl>1); }
+	| func_decl_args TCOMMA func_decl_arg { $1->push_back($<var_decl>3); }
 	;
 
 ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }

@@ -30,6 +30,9 @@ extern "C" int yywrap() { }
 "-" return TOKEN(TMINUS);
 "*" return TOKEN(TMUL);
 "/" return TOKEN(TDIV);
+";" return TOKEN(TSEMI);
+"[" return TOKEN(TLBRACK);
+"]" return TOKEN(TRBRACK);
 . printf("Unknown token!\n"); yyterminate();
 
 %%
