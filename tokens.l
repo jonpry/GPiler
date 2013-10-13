@@ -33,6 +33,8 @@ extern "C" int yywrap() { }
 ";" return TOKEN(TSEMI);
 "[" return TOKEN(TLBRACK);
 "]" return TOKEN(TRBRACK);
+":" return TOKEN(TCOLON);
+"::" return TOKEN(TDCOLON);
 . printf("Unknown token!\n"); yyterminate();
 
 %%

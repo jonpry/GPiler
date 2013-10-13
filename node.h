@@ -9,6 +9,8 @@ class NStatement;
 class NIdentifier;
 class NType;
 class NVariableDeclaration;
+class NPipeLine;
+class NMap;
 
 #include "parser.hpp"
 
@@ -22,6 +24,8 @@ class NVariableDeclaration;
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
 typedef std::vector<NVariableDeclaration*> VariableList;
+typedef std::vector<NIdentifier*> IdList;
+typedef std::vector<NMap*> MapList;
 
 class Node {
 public:
@@ -74,6 +78,17 @@ public:
 	void print(ostream& os) { os << "Identifier: " << name << "\n"; }
 };
 
+class NMap : public NExpression {
+public:
+	const NIdentifier& name;
+	IdList &vars;
+	NExpression& expr;
+
+	NMap(const NIdentifier& name, IdList &vars, NExpression &expr) : name(name), vars(vars), expr(expr) { }
+//	virtual llvm::Value* codeGen(CodeGenContext& context);
+	void print(ostream& os) { os << "Map: TODO: " << (Node&)name << "\n"; }
+};
+
 class NType: public NIdentifier {
 public:
 	int isArray;
@@ -101,6 +116,19 @@ public:
 		sTabs--;
 	}
 };
+
+class NPipeLine : public NExpression {
+public:
+	const NIdentifier &dest, &src;
+	MapList chain;
+	NPipeLine(const NIdentifier& src, const NIdentifier& dest, MapList& chain) : src(src), chain(chain), dest(dest) { }
+//	virtual llvm::Value* codeGen(CodeGenContext& context);
+
+	void print(ostream& os) { 
+		os << "PipeLine: TODO\n";
+	}
+};
+
 
 class NBinaryOperator : public NExpression {
 public:

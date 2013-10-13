@@ -16,9 +16,12 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 	NStatement *stmt;
 	NIdentifier *ident;
 	NType *type;
+	NMap *map;
 	NVariableDeclaration *var_decl;
 	std::vector<NVariableDeclaration*> *varvec;
 	std::vector<NExpression*> *exprvec;
+	std::vector<NMap*> *pipevec;
+	std::vector<NIdentifier*> *fvarvec;
 	std::string *string;
 	int token;
 }
@@ -31,7 +34,7 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV 
-%token <token> TSEMI TLBRACK TRBRACK
+%token <token> TSEMI TLBRACK TRBRACK TCOLON TDCOLON
 
 
 /* Define the type of node our nonterminal symbols represent.
@@ -41,11 +44,14 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
  */
 %type <ident> ident 
 %type <type> type
-%type <expr> numeric expr assignment func_call
+%type <expr> numeric expr assignment func_call pipeline
 %type <varvec> func_decl_args
 %type <exprvec> call_args
+%type <pipevec> pipeline_chain
+%type <fvarvec> functional_vars
 %type <block> program stmts block func_decls
 %type <stmt> stmt var_decl func_decl func_decl_arg 
+%type <map> map
 
 /* Operator precedence for mathematical operators */
 %left TPLUS TMINUS
@@ -70,7 +76,23 @@ stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
 stmt : var_decl TSEMI
 	| assignment TSEMI { $$ = new NExpressionStatement(*$1); }
 	| func_call TSEMI { $$ = new NExpressionStatement(*$1); }
+	| pipeline TSEMI { $$ = new NExpressionStatement(*$1); }
      	;
+
+pipeline : ident TDCOLON pipeline_chain TCGT ident {$$ = new NPipeLine(*$1,*$5,*$3); }
+	;
+
+pipeline_chain: map { $$ = new MapList(); $$->push_back($1); } 
+	| pipeline_chain TDCOLON map { $1->push_back($3); }
+	;
+
+functional_vars: ident { $$ = new IdList(); $$->push_back($1); }
+	| functional_vars TCOMMA ident { $1->push_back($3); }
+	;
+	
+
+map : ident TLPAREN functional_vars TCOLON expr TRPAREN { $$ = new NMap(*$1,*$3,*$5); }
+	;
 
 block : TLBRACE stmts TRBRACE { $$ = $2; }
 	| TLBRACE TRBRACE { $$ = new NBlock(); }
