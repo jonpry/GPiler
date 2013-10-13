@@ -5,6 +5,7 @@
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
 #include <llvm/Constants.h>
+#include <llvm/Constant.h>
 #include <llvm/LLVMContext.h>
 #include <llvm/PassManager.h>
 #include <llvm/Instructions.h>

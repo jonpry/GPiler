@@ -3,7 +3,8 @@ all: parser
 OBJS = 	parser.o \
        	main.o \
        	tokens.o \
-	codegen.o 
+	codegen.o \
+	corefn.o
 
 CPPFLAGS = `llvm-config-3.0 --cppflags`
 LDFLAGS = `llvm-config-3.0 --ldflags`

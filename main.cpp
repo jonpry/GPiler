@@ -9,18 +9,18 @@ int Node::sTabs = 0;
 extern int yyparse();
 extern NBlock* programBlock;
 
-//void createCoreFunctions(CodeGenContext& context);
+void createCoreFunctions(CodeGenContext& context);
 
 int main(int argc, char **argv)
 {
 	yyparse();
 	std::cout << *programBlock << endl;
     // see http://comments.gmane.org/gmane.comp.compilers.llvm.devel/33877
-/*	InitializeNativeTarget();
+	InitializeNativeTarget();
 	CodeGenContext context;
 	createCoreFunctions(context);
 	context.generateCode(*programBlock);
 	context.runCode();
-*/
+
 	return 0;
 }
