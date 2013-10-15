@@ -10,6 +10,7 @@ extern int yyparse();
 extern NBlock* programBlock;
 
 void createCoreFunctions(CodeGenContext& context);
+void compile(Module &mod);
 
 int main(int argc, char **argv)
 {
@@ -20,7 +21,8 @@ int main(int argc, char **argv)
 	CodeGenContext context;
 	createCoreFunctions(context);
 	context.generateCode(*programBlock);
-	context.runCode();
+	compile(*context.module);
+//	context.runCode();
 
 	return 0;
 }
