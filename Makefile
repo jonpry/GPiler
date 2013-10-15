@@ -7,9 +7,9 @@ OBJS = 	parser.o \
 	corefn.o \
 	compile.o
 
-CPPFLAGS = `llvm-config-3.0 --cppflags`
-LDFLAGS = `llvm-config-3.0 --ldflags`
-LIBS = `llvm-config-3.0 --libs`
+CPPFLAGS = `llvm-config-3.1 --cppflags`
+LDFLAGS = `llvm-config-3.1 --ldflags`
+LIBS = `llvm-config-3.1 --libs`
 
 clean:
 	$(RM) -rf parser.cpp parser.hpp parser tokens.cpp $(OBJS)

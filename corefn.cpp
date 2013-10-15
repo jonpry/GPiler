@@ -47,7 +47,7 @@ void createEchoFunction(CodeGenContext& context, llvm::Function* printfFn)
 context.pushBlock(bblock);
     
     const char *constValue = "%d\n";
-    llvm::Constant *format_const = llvm::ConstantArray::get(getGlobalContext(), constValue);
+    llvm::Constant *format_const =  llvm::ConstantDataArray::getString(getGlobalContext(), constValue);
     llvm::GlobalVariable *var =
         new llvm::GlobalVariable(
             *context.module, llvm::ArrayType::get(llvm::IntegerType::get(getGlobalContext(), 8), strlen(constValue)+1),
