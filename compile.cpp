@@ -4,14 +4,14 @@
 
 #include <cstdio>
 
-#include "llvm/LLVMContext.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/IR/DataLayout.h"
 
 void compile(Module &mod){
 	InitializeAllTargets();
@@ -19,15 +19,24 @@ void compile(Module &mod){
   	InitializeAllAsmPrinters();
   	InitializeAllAsmParsers();
 
+  	// Initialize codegen and IR passes used by llc so that the -print-after,
+  	// -print-before, and -stop-after options work.
+  	PassRegistry *Registry = PassRegistry::getPassRegistry();
+  	initializeCore(*Registry);
+  	initializeCodeGen(*Registry);
+  	initializeLoopStrengthReducePass(*Registry);
+  	initializeLowerIntrinsicsPass(*Registry);
+  	initializeUnreachableBlockElimPass(*Registry);
 
- 	mod.setTargetTriple(Triple::normalize("ptx64-unknown-unknown"));
+
+ 	mod.setTargetTriple(Triple::normalize("nvptx64-unknown-unknown"));
 	Triple TheTriple(mod.getTargetTriple());
   	if (TheTriple.getTriple().empty())
-		cout << "Could not locate tripple\n";
+		cout << "Could not locate triple\n";
 	else
 		cout << "Triple: " << TheTriple.getTriple() << "\n";
 
-	std::string march = "ptx64";
+	std::string march = "nvptx64";
 	const Target *TheTarget = 0;
     	for (TargetRegistry::iterator it = TargetRegistry::begin(); it != TargetRegistry::end(); ++it) {
 	//	cout << it->getName() << "\n";
@@ -55,10 +64,8 @@ void compile(Module &mod){
 
   	TargetOptions Options;
   	Options.LessPreciseFPMADOption = false;
-  	Options.PrintMachineCode = false;
   	Options.NoFramePointerElim = false;
-  	Options.NoFramePointerElimNonLeaf = false;
-  	Options.NoExcessFPPrecision = false;
+  //	Options.AllowFPOpFusion = true;
   	Options.UnsafeFPMath = false;
   	Options.NoInfsFPMath = false;
   	Options.NoNaNsFPMath = false;
@@ -68,11 +75,10 @@ void compile(Module &mod){
   	Options.GuaranteedTailCallOpt = false;
   	Options.DisableTailCalls = false;
   	Options.StackAlignmentOverride = 0;
-  	Options.RealignStack = true;
-  	Options.DisableJumpTables = false;
   	Options.TrapFuncName = "";
   	Options.PositionIndependentExecutable = false;
   	Options.EnableSegmentedStacks = false;
+	Options.UseInitArray = false;
 
 	std::auto_ptr<TargetMachine>
     		target(TheTarget->createTargetMachine(TheTriple.getTriple(),
@@ -87,10 +93,12 @@ void compile(Module &mod){
 	
 
   	// Add the target data from the target machine, if it exists, or the module.
-  	if (const TargetData *TD = Target.getTargetData())
-    		PM.add(new TargetData(*TD));
+ 	if (const DataLayout *TD = Target.getDataLayout())
+    		PM.add(new DataLayout(*TD));
   	else
-    		PM.add(new TargetData(&mod));
+    		PM.add(new DataLayout(&mod));
+
+
 
   	// Override default to generate verbose assembly.
   	Target.setAsmVerbosityDefault(true);
