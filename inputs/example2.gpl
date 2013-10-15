@@ -1,0 +1,4 @@
+
+[int32] mapit([int32] input){
+	input :: map(x : x*x) > return;
+}

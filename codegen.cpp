@@ -148,6 +148,24 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 	return alloc;
 }
 
+void addKernelMetadata(llvm::Function *F) {
+  llvm::Module *M = F->getParent();
+  llvm::LLVMContext &Ctx = M->getContext();
+
+  // Get "nvvm.annotations" metadata node
+  llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
+
+  // Create !{<func-ref>, metadata !"kernel", i32 1} node
+  llvm::SmallVector<llvm::Value *, 3> MDVals;
+  MDVals.push_back(F);
+  MDVals.push_back(llvm::MDString::get(Ctx, "device"));
+  MDVals.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1));
+
+  // Append metadata to nvvm.annotations
+  MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
+}
+ 
+
 Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 {
 	vector<Type*> argTypes;
@@ -158,6 +176,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	FunctionType *ftype = FunctionType::get(typeOf(type), makeArrayRef(argTypes), false);
 	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id.name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
+
+	addKernelMetadata(function);
 
 	context.pushBlock(bblock);
 
@@ -170,8 +190,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 		const char* name = (*it)->id.name.c_str();
     		AI->setName(name);
 
-    // Add arguments to variable symbol table.
-    //		context.locals()[(*it)->id.name] = AI;
+    	// Add arguments to variable symbol table.
+    	//		context.locals()[(*it)->id.name] = AI;
 
 		(*it)->codeGen(context);
 		new StoreInst((Value*)AI, context.locals()[ (*it)->id.name], false, context.currentBlock());

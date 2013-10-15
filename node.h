@@ -86,7 +86,17 @@ public:
 
 	NMap(const NIdentifier& name, IdList &vars, NExpression &expr) : name(name), vars(vars), expr(expr) { }
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { os << "Map: TODO: " << (Node&)name << "\n"; }
+	void print(ostream& os) { 
+		os << "Map:\n";
+		sTabs++;
+		os << (Node&)name;
+		IdList::iterator it;
+		for(it = vars.begin(); it != vars.end(); it++){
+			os << ** it;
+		} 
+		os << expr;
+		sTabs--;
+	}
 };
 
 class NType: public NIdentifier {
@@ -125,7 +135,15 @@ public:
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
-		os << "PipeLine: TODO\n";
+		os << "PipeLine:\n";
+		sTabs++;
+		os << (Node&)src;
+		os << (Node&)dest;
+		MapList::iterator it;
+		for(it = chain.begin(); it!=chain.end(); it++){
+			os << **it;
+		}
+		sTabs--;
 	}
 };
 

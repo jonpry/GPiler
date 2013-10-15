@@ -16,13 +16,11 @@ int main(int argc, char **argv)
 {
 	yyparse();
 	std::cout << *programBlock << endl;
-    // see http://comments.gmane.org/gmane.comp.compilers.llvm.devel/33877
-	InitializeNativeTarget();
-	CodeGenContext context;
-	createCoreFunctions(context);
-	context.generateCode(*programBlock);
-	compile(*context.module);
-//	context.runCode();
+
+//	CodeGenContext context;
+//	createCoreFunctions(context);
+//	context.generateCode(*programBlock);
+//	compile(*context.module);
 
 	return 0;
 }
