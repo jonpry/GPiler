@@ -55,7 +55,7 @@ void compile(Module &mod){
 
   	TargetOptions Options;
   	Options.LessPreciseFPMADOption = false;
-  	Options.PrintMachineCode = true;
+  	Options.PrintMachineCode = false;
   	Options.NoFramePointerElim = false;
   	Options.NoFramePointerElimNonLeaf = false;
   	Options.NoExcessFPPrecision = false;
