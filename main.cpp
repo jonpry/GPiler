@@ -21,6 +21,9 @@ void rewrite_arrays(NFunctionDeclaration *decl){
 		NVariableDeclaration *var = new NVariableDeclaration(old_type,new NIdentifier("return"),0);
 		decl->arguments->insert(decl->arguments->begin(),var);
 	}
+
+	NVariableDeclaration *idxvar = new NVariableDeclaration(new NType("int32",0),new NIdentifier("idx"),0);
+	decl->arguments->insert(decl->arguments->begin(),idxvar);
 }
 
 void rewrite_arrays(NBlock* programBlock){
