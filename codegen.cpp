@@ -78,17 +78,17 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
 {
-	Function *function = context.module->getFunction(id.name.c_str());
+	Function *function = context.module->getFunction(id->name.c_str());
 	if (function == NULL) {
-		std::cerr << "no such function " << id.name << endl;	
+		std::cerr << "no such function " << id->name << endl;	
 	}
 	std::vector<Value*> args;
 	ExpressionList::const_iterator it;
-	for (it = arguments.begin(); it != arguments.end(); it++) {
+	for (it = arguments->begin(); it != arguments->end(); it++) {
 		args.push_back((**it).codeGen(context));
 	}
 	CallInst *call = CallInst::Create(function, makeArrayRef(args), "", context.currentBlock());
-	std::cout << "Creating method call: " << id.name << endl;
+	std::cout << "Creating method call: " << id->name << endl;
 	return call;
 }
 
@@ -107,18 +107,18 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 	return NULL;
 	math:
-	return BinaryOperator::Create(instr, lhs.codeGen(context),
-		rhs.codeGen(context), "", context.currentBlock());
+	return BinaryOperator::Create(instr, lhs->codeGen(context),
+		rhs->codeGen(context), "", context.currentBlock());
 }
 
 Value* NAssignment::codeGen(CodeGenContext& context)
 {
-	std::cout << "Creating assignment for " << lhs.name << endl;
-	if (context.locals().find(lhs.name) == context.locals().end()) {
-		std::cerr << "undeclared variable " << lhs.name << endl;
+	std::cout << "Creating assignment for " << lhs->name << endl;
+	if (context.locals().find(lhs->name) == context.locals().end()) {
+		std::cerr << "undeclared variable " << lhs->name << endl;
 		return NULL;
 	}
-	return new StoreInst(rhs.codeGen(context), context.locals()[lhs.name], false, context.currentBlock());
+	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name], false, context.currentBlock());
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -138,11 +138,11 @@ Value* NBlock::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	std::cout << "Creating variable declaration " << type.name << " " << id.name << endl;
-	AllocaInst *alloc = new AllocaInst(typeOf(type), id.name.c_str(), context.currentBlock());
-	context.locals()[id.name] = alloc;
+	std::cout << "Creating variable declaration " << type->name << " " << id->name << endl;
+	AllocaInst *alloc = new AllocaInst(typeOf(*type), id->name.c_str(), context.currentBlock());
+	context.locals()[id->name] = alloc;
 	if (assignmentExpr != NULL) {
-		NAssignment assn(id, *assignmentExpr);
+		NAssignment assn(id, assignmentExpr);
 		assn.codeGen(context);
 	}
 	return alloc;
@@ -170,37 +170,37 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 {
 	vector<Type*> argTypes;
 	VariableList::const_iterator it;
-	for (it = arguments.begin(); it != arguments.end(); it++) {
-		argTypes.push_back(typeOf((**it).type));
+	for (it = arguments->begin(); it != arguments->end(); it++) {
+		argTypes.push_back(typeOf(*((**it).type)));
 	}	
-	FunctionType *ftype = FunctionType::get(typeOf(type), makeArrayRef(argTypes), false);
-	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id.name.c_str(), context.module);
+	FunctionType *ftype = FunctionType::get(typeOf(*type), makeArrayRef(argTypes), false);
+	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id->name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 
 	addKernelMetadata(function);
 
 	context.pushBlock(bblock);
 
-	if(id.name == "main")
+	if(id->name == "main")
 		context.mainFunction = function;
 
   	// Set names for all arguments.
 	Function::arg_iterator AI;
-  	for (AI = function->arg_begin(), it = arguments.begin(); it != arguments.end(); ++AI, ++it) {
-		const char* name = (*it)->id.name.c_str();
+  	for (AI = function->arg_begin(), it = arguments->begin(); it != arguments->end(); ++AI, ++it) {
+		const char* name = (*it)->id->name.c_str();
     		AI->setName(name);
 
     	// Add arguments to variable symbol table.
     	//		context.locals()[(*it)->id.name] = AI;
 
 		(*it)->codeGen(context);
-		new StoreInst((Value*)AI, context.locals()[ (*it)->id.name], false, context.currentBlock());
+		new StoreInst((Value*)AI, context.locals()[ (*it)->id->name], false, context.currentBlock());
   	}
 
-	block.codeGen(context);
+	block->codeGen(context);
 	ReturnInst::Create(getGlobalContext(), bblock);
 
 	context.popBlock();
-	std::cout << "Creating function: " << id.name << endl;
+	std::cout << "Creating function: " << id->name << endl;
 	return function;
 }

@@ -80,21 +80,21 @@ public:
 
 class NMap : public NExpression {
 public:
-	const NIdentifier& name;
-	IdList &vars;
-	NExpression& expr;
+	NIdentifier* name;
+	IdList *vars;
+	NExpression* expr;
 
-	NMap(const NIdentifier& name, IdList &vars, NExpression &expr) : name(name), vars(vars), expr(expr) { }
+	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr) { }
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Map:\n";
 		sTabs++;
-		os << (Node&)name;
+		os << *name;
 		IdList::iterator it;
-		for(it = vars.begin(); it != vars.end(); it++){
+		for(it = vars->begin(); it != vars->end(); it++){
 			os << ** it;
 		} 
-		os << expr;
+		os << *expr;
 		sTabs--;
 	}
 };
@@ -109,19 +109,18 @@ public:
 
 class NMethodCall : public NExpression {
 public:
-	const NIdentifier& id;
-	ExpressionList arguments;
-	NMethodCall(const NIdentifier& id, ExpressionList& arguments) :
-	id(id), arguments(arguments) { }
-	NMethodCall(const NIdentifier& id) : id(id) { }
+	NIdentifier* id;
+	ExpressionList* arguments;
+	NMethodCall(NIdentifier *id, ExpressionList* arguments) : id(id), arguments(arguments) { }
+	NMethodCall(NIdentifier *id) : id(id) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
 		os << "MethodCall:\n";
 		sTabs++;
-		os << (Node&)id;
+		os << *id;
 		ExpressionList::iterator it;
-		for(it = arguments.begin(); it!=arguments.end(); it++)
+		for(it = arguments->begin(); it!=arguments->end(); it++)
 			os << ** it;
 		sTabs--;
 	}
@@ -129,18 +128,18 @@ public:
 
 class NPipeLine : public NExpression {
 public:
-	const NIdentifier &dest, &src;
-	MapList chain;
-	NPipeLine(const NIdentifier& src, const NIdentifier& dest, MapList& chain) : src(src), chain(chain), dest(dest) { }
+	NIdentifier *dest, *src;
+	MapList *chain;
+	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : src(src), chain(chain), dest(dest) { }
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
 		os << "PipeLine:\n";
 		sTabs++;
-		os << (Node&)src;
-		os << (Node&)dest;
+		os << *src;
+		os << *dest;
 		MapList::iterator it;
-		for(it = chain.begin(); it!=chain.end(); it++){
+		for(it = chain->begin(); it!=chain->end(); it++){
 			os << **it;
 		}
 		sTabs--;
@@ -151,10 +150,8 @@ public:
 class NBinaryOperator : public NExpression {
 public:
 	int op;
-	NExpression& lhs;
-	NExpression& rhs;
-	NBinaryOperator(NExpression& lhs, int op, NExpression& rhs) :
-	lhs(lhs), rhs(rhs), op(op) { }
+	NExpression *lhs, *rhs;
+	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : lhs(lhs), rhs(rhs), op(op) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
@@ -167,18 +164,17 @@ public:
 			default:	os << "unknown op\n"; break; 
 		}
 		sTabs++;
-		os << lhs;
-		os << rhs;
+		os << *lhs;
+		os << *rhs;
 		sTabs--;
 	}
 };
 
 class NAssignment : public NExpression {
 public:
-	NIdentifier& lhs;
-	NExpression& rhs;
-	NAssignment(NIdentifier& lhs, NExpression& rhs) :
-	lhs(lhs), rhs(rhs) { }
+	NIdentifier *lhs;
+	NExpression *rhs;
+	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Assignment: " << lhs << "\n"; }
 };
@@ -204,19 +200,17 @@ public:
 
 class NVariableDeclaration : public NExpression {
 public:
-	const NType& type;
-	NIdentifier& id;
+ 	NType *type;
+	NIdentifier *id;
 	NExpression *assignmentExpr;
-	NVariableDeclaration(const NType& type, NIdentifier& id) :
-	type(type), id(id) { }
-	NVariableDeclaration(const NType& type, NIdentifier& id, NExpression *assignmentExpr) :
-	type(type), id(id), assignmentExpr(assignmentExpr) { }
+	NVariableDeclaration(NType *type, NIdentifier *id) : type(type), id(id) { }
+	NVariableDeclaration(NType *type, NIdentifier *id, NExpression *assignmentExpr) : type(type), id(id), assignmentExpr(assignmentExpr) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Variable decl:\n"; 
 		sTabs++;
-		os << (Node&)type;
-		os << id;
+		os << *type;
+		os << *id;
 		if(assignmentExpr)
 			os << *assignmentExpr;
 		sTabs--;
@@ -225,22 +219,21 @@ public:
 
 class NFunctionDeclaration : public NStatement {
 public:
-	const NType& type;
-	const NIdentifier& id;
-	VariableList arguments;
-	NBlock& block;
-	NFunctionDeclaration(const NType& type, const NIdentifier& id,
-	const VariableList& arguments, NBlock& block) :
+	NType *type;
+	NIdentifier *id;
+	VariableList *arguments;
+	NBlock *block;
+	NFunctionDeclaration(NType* type, NIdentifier* id, VariableList* arguments, NBlock *block) :
 	type(type), id(id), arguments(arguments), block(block) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Function decl:\n"; 
 		sTabs++;
-		os << (Node&)type << (Node&)id;
+		os << *type << *id;
 		VariableList::iterator it;
-		for(it = arguments.begin(); it!=arguments.end(); it++)
+		for(it = arguments->begin(); it!=arguments->end(); it++)
 			os << **it;
-		os << block;	
+		os << *block;	
  		sTabs--;
 	}
 };

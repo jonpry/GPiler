@@ -79,7 +79,7 @@ stmt : var_decl TSEMI
 	| pipeline TSEMI 
      	;
 
-pipeline : ident TDCOLON pipeline_chain TCGT ident {$$ = new NPipeLine(*$1,*$5,*$3); }
+pipeline : ident TDCOLON pipeline_chain TCGT ident {$$ = new NPipeLine($1,$5,$3); }
 	;
 
 pipeline_chain: map { $$ = new MapList(); $$->push_back($1); } 
@@ -91,22 +91,22 @@ functional_vars: ident { $$ = new IdList(); $$->push_back($1); }
 	;
 	
 
-map : ident TLPAREN functional_vars TCOLON expr TRPAREN { $$ = new NMap(*$1,*$3,*$5); }
+map : ident TLPAREN functional_vars TCOLON expr TRPAREN { $$ = new NMap($1,$3,$5); }
 	;
 
 block : TLBRACE stmts TRBRACE { $$ = $2; }
 	| TLBRACE TRBRACE { $$ = new NBlock(); }
 	;
 
-var_decl : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
-	| type ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
+var_decl : type ident { $$ = new NVariableDeclaration($1, $2); }
+	| type ident TEQUAL expr { $$ = new NVariableDeclaration($1, $2, $4); }
 	;
 
-func_decl_arg : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
+func_decl_arg : type ident { $$ = new NVariableDeclaration($1, $2); }
 	;
  
 func_decl : type ident TLPAREN func_decl_args TRPAREN block
-	{ $$ = new NFunctionDeclaration(*$1, *$2, *$4, *$6); delete $4; }
+	{ $$ = new NFunctionDeclaration($1, $2, $4, $6); }
 	;
 
 type : TIDENTIFIER { $$ = new NType(*$1,0); delete $1; }
@@ -125,25 +125,26 @@ numeric : TINTEGER { $$ = new NInteger(atol($1->c_str())); delete $1; }
 	| TDOUBLE { $$ = new NDouble(atof($1->c_str())); delete $1; }
 	;
 
-assignment : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
+assignment : ident TEQUAL expr { $$ = new NAssignment($<ident>1, $3); }
 
 expr :  ident { $<ident>$ = $1; }
 	| numeric
-  	| expr TCEQ expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TCNE expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TCGT expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TCLT expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TCLE expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TCGE expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-	| expr TPLUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TMINUS expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TMUL expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-  	| expr TDIV expr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+  	| expr TCEQ expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TCNE expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TCGT expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TCLT expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TCLE expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TCGE expr { $$ = new NBinaryOperator($1, $2, $3); }
+	| expr TPLUS expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TMINUS expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TMUL expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TDIV expr { $$ = new NBinaryOperator($1, $2, $3); }
      	| TLPAREN expr TRPAREN { $$ = $2; }
 	| func_call
 	;
 
-func_call : ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; };
+func_call : ident TLPAREN call_args TRPAREN { $$ = new NMethodCall($1, $3); }
+	;
 
 call_args : /*blank*/ { $$ = new ExpressionList(); }
 	| expr { $$ = new ExpressionList(); $$->push_back($1); }
