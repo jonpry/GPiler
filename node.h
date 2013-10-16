@@ -176,7 +176,14 @@ public:
 	NExpression *rhs;
 	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { os << "Assignment: " << lhs << "\n"; }
+	void print(ostream& os) 
+	{ 
+		os << "Assignment:\n";
+		sTabs++;
+		os << *lhs;
+		os << *rhs; 
+		sTabs--;
+	}
 };
 
 class NBlock : public NExpression {
