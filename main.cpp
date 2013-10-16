@@ -47,11 +47,12 @@ int main(int argc, char **argv)
 	cout << "Pass1:\n";
 
 	std::cout << *programBlock << endl;
-	
-//	CodeGenContext context;
-//	createCoreFunctions(context);
-//	context.generateCode(*programBlock);
-//	compile(*context.module);
 
+#if 1	
+	CodeGenContext context;
+	createCoreFunctions(context);
+	context.generateCode(*programBlock);
+	compile(*context.module);
+#endif
 	return 0;
 }
