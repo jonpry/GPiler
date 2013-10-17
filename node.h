@@ -174,7 +174,8 @@ class NAssignment : public NExpression {
 public:
 	NIdentifier *lhs;
 	NExpression *rhs;
-	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs) { }
+	int isReturn;
+	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs), isReturn(0) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) 
 	{ 

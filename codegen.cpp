@@ -126,6 +126,8 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << lhs->name << endl;
 		return NULL;
 	}
+	if(isReturn)
+		return ReturnInst::Create(getGlobalContext(), rhs->codeGen(context), context.currentBlock());
 	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name], false, context.currentBlock());
 }
 
@@ -206,7 +208,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
   	}
 
 	block->codeGen(context);
-	ReturnInst::Create(getGlobalContext(), bblock);
+	if(type->name.compare("void")==0)
+		ReturnInst::Create(getGlobalContext(), bblock);
 
 	context.popBlock();
 	std::cout << "Creating function: " << id->name << endl;

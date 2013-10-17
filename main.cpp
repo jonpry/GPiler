@@ -73,8 +73,10 @@ NFunctionDeclaration *extract_func(NMap* map) {
 	}
 	NBlock *func_block = new NBlock();
 
-	func_block->expressions.push_back(new NAssignment(*(map->vars->begin()), map->expr));
-	func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
+	NAssignment *assignment = new NAssignment(*(map->vars->begin()), map->expr);
+	assignment->isReturn = 1;
+	func_block->expressions.push_back(assignment);
+	//func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
 
 	NFunctionDeclaration *anon_func = new NFunctionDeclaration(new NType("int32",0),
 			new NIdentifier(create_anon_name()),
