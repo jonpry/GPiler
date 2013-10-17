@@ -28,24 +28,13 @@ void rewrite_arrays(NFunctionDeclaration *decl){
 }
 
 std::string create_anon_name(void) {
-	static int idx = 0;
-	char buf[15];
-	sprintf(buf,"anon%d",idx++);
+	static unsigned idx = 0;
+	char buf[16];
+	sprintf(buf,"anon%u",idx++);
 	return std::string(buf);
 }
 
 void rewrite_map(NMap *map) {
-}
-
-NFunctionDeclaration *extract_func(NMap* map) {
-	/*
-	NFunctionDeclaration *anon_func = new NFunctionDeclaration(new NType("int32",0),
-			new NIdentifier(create_anon_name()),
-			map->vars,
-			map->expr
-			);
-	return anon_func;
-	*/
 }
 
 std::vector<NMap*> extract_maps(ExpressionList &el) {
@@ -65,7 +54,7 @@ std::vector<NMap*> extract_maps(StatementList &sl) {
 	for(StatementList::iterator it = sl.begin(); it != sl.end(); it++) {
 		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(func) {
-			std::vector<NMap*> maps = extract_maps(func->block->statements);
+			std::vector<NMap*> maps = extract_maps(func->block->expressions);
 			ret.insert(ret.end(), maps.begin(), maps.end());
 		}
 	}
@@ -76,8 +65,36 @@ std::vector<NMap*> extract_maps(NBlock *pb) {
 	return extract_maps(pb->statements);
 }
 
+NFunctionDeclaration *extract_func(NMap* map) {
+	VariableList *var_list = new VariableList;
+	// turn ids into vars
+	for (IdList::iterator it = map->vars->begin(); it != map->vars->end(); it++) {
+		var_list->push_back(new NVariableDeclaration(new NType("int32",0), *it));
+	}
+	NBlock *func_block = new NBlock();
+
+	func_block->expressions.push_back(new NAssignment(*(map->vars->begin()), map->expr));
+	func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
+
+	NFunctionDeclaration *anon_func = new NFunctionDeclaration(new NType("int32",0),
+			new NIdentifier(create_anon_name()),
+			var_list,
+			func_block
+			);
+	return anon_func;
+}
+
 void rewrite_maps(NBlock *pb) {
 	std::vector<NMap*> maps = extract_maps(pb);
+	std::vector<NFunctionDeclaration*> anon_funcs;
+	for (MapList::iterator it = maps.begin(); it != maps.end(); ++it) {
+		NFunctionDeclaration *anon_func = extract_func(*it);
+		anon_funcs.push_back(anon_func);
+		// TODO rewrite map to method call
+		//delete **it.expr;
+		//**it.expr = new NMethodCall(anon_func->id, **it.
+	}
+	pb->statements.insert(pb->statements.end(), anon_funcs.begin(), anon_funcs.end());
 }
 
 void rewrite_arrays(NBlock* programBlock){
@@ -108,7 +125,7 @@ int main(int argc, char **argv)
 	cout << "Pass2:\n";
 	std::cout << *programBlock << endl;
 
-#if 1	
+#if 1
 	CodeGenContext context;
 	createCoreFunctions(context);
 	context.generateCode(*programBlock);
