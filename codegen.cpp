@@ -65,7 +65,7 @@ static Type *typeOf(const NType* type)
 Value* NInteger::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating integer: " << value << endl;
-	return ConstantInt::get(Type::getInt64Ty(getGlobalContext()), value, true);
+	return ConstantInt::get(Type::getInt32Ty(getGlobalContext()), value, true);
 }
 
 Value* NDouble::codeGen(CodeGenContext& context)
@@ -156,6 +156,24 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 		assn.codeGen(context);
 	}
 	return alloc;
+}
+
+Value* NArrayRef::codeGen(CodeGenContext& context)
+{
+	//TODO:
+	std::cout << "Creating array reference " << array->name << " " << index->name << endl;
+
+	std::map<std::string, Value*>::iterator it;
+	for(it = context.locals().begin(); it!= context.locals().end(); it++){
+		std::cout << (*it).first << " " << (*it).second << "\n";
+	}
+	char gep_name[64];
+	sprintf(gep_name, "gep.%s.%s", array->name.c_str(), index->name.c_str());
+
+	Value* gep = GetElementPtrInst::Create(context.locals()[array->name], ArrayRef<Value*>(context.locals()[index->name]),gep_name,context.currentBlock());
+	cout << "Generated\n";
+	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
+	return new LoadInst(ld1, "", false, context.currentBlock());
 }
 
 void addKernelMetadata(llvm::Function *F) {

@@ -49,8 +49,8 @@ std::vector<NMap*> extract_maps(ExpressionList &el) {
 }
 
 // walk ast and get all maps
-std::vector<NMap*> extract_maps(StatementList &sl) {
-	std::vector<NMap*> ret;
+MapList extract_maps(StatementList &sl) {
+	MapList ret;
 	for(StatementList::iterator it = sl.begin(); it != sl.end(); it++) {
 		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(func) {
@@ -61,9 +61,10 @@ std::vector<NMap*> extract_maps(StatementList &sl) {
 	return ret;
 }
 
-std::vector<NMap*> extract_maps(NBlock *pb) {
+MapList extract_maps(NBlock *pb) {
 	return extract_maps(pb->statements);
 }
+
 
 NFunctionDeclaration *extract_func(NMap* map) {
 	VariableList *var_list = new VariableList;
@@ -87,7 +88,7 @@ NFunctionDeclaration *extract_func(NMap* map) {
 }
 
 void rewrite_maps(NBlock *pb) {
-	std::vector<NMap*> maps = extract_maps(pb);
+	MapList maps = extract_maps(pb);
 	std::vector<NFunctionDeclaration*> anon_funcs;
 	for (MapList::iterator it = maps.begin(); it != maps.end(); ++it) {
 		NFunctionDeclaration *anon_func = extract_func(*it);
@@ -109,6 +110,25 @@ void rewrite_arrays(NBlock* programBlock){
 	}
 }
 
+void rewrite_pipelines(NBlock *pb){
+	StatementList::iterator it;
+	for(it = programBlock->statements.begin(); it != programBlock->statements.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl){
+			ExpressionList::iterator it2;
+			for(it2 = decl->block->expressions.begin(); it2 != decl->block->expressions.end(); it2++){
+				NPipeLine *pipe = dynamic_cast<NPipeLine*>(*it2);
+				if(pipe){
+					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
+					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier("temp0"),iptr);
+					decl->block->expressions.insert(it2,dec);
+				}
+			}
+		}
+	}
+}
+
+
 int main(int argc, char **argv)
 {
 	yyparse();
@@ -126,6 +146,10 @@ int main(int argc, char **argv)
 	rewrite_maps(programBlock);
 	cout << "Pass2:\n";
 	std::cout << *programBlock << endl;
+
+	cout << "Pass3:\n";
+	rewrite_pipelines(programBlock);
+	cout << *programBlock;
 
 #if 1
 	CodeGenContext context;

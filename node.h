@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <list>
 #include <llvm/IR/Value.h>
 
 class Node;
@@ -21,11 +22,11 @@ class NStatement;
 class NExpression;
 class NVariableDeclaration;
 
-typedef std::vector<NStatement*> StatementList;
-typedef std::vector<NExpression*> ExpressionList;
-typedef std::vector<NVariableDeclaration*> VariableList;
-typedef std::vector<NIdentifier*> IdList;
-typedef std::vector<NMap*> MapList;
+typedef list<NStatement*> StatementList;
+typedef list<NExpression*> ExpressionList;
+typedef list<NVariableDeclaration*> VariableList;
+typedef list<NIdentifier*> IdList;
+typedef list<NMap*> MapList;
 
 class Node {
 public:
@@ -170,6 +171,21 @@ public:
 	}
 };
 
+class NArrayRef : public NExpression {
+public:
+	NIdentifier *array, *index;
+	NArrayRef(NIdentifier *array, NIdentifier *index) : array(array), index(index) { }
+	virtual llvm::Value* codeGen(CodeGenContext& context);
+
+	void print(ostream& os) { 
+		os << "Array Ref:\n";
+		sTabs++;
+		os << *array;
+		os << *index;
+		sTabs--;
+	}
+};
+
 class NAssignment : public NExpression {
 public:
 	NIdentifier *lhs;
@@ -179,7 +195,7 @@ public:
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) 
 	{ 
-		os << "Assignment:\n";
+		os << "Assignment: return: " << isReturn << "\n";
 		sTabs++;
 		os << *lhs;
 		os << *rhs; 

@@ -18,10 +18,10 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 	NType *type;
 	NMap *map;
 	NVariableDeclaration *var_decl;
-	std::vector<NVariableDeclaration*> *varvec;
-	std::vector<NExpression*> *exprvec;
-	std::vector<NMap*> *pipevec;
-	std::vector<NIdentifier*> *fvarvec;
+	std::list<NVariableDeclaration*> *varvec;
+	std::list<NExpression*> *exprvec;
+	std::list<NMap*> *pipevec;
+	std::list<NIdentifier*> *fvarvec;
 	std::string *string;
 	int token;
 }
