@@ -169,12 +169,10 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 	for(it = context.locals().begin(); it!= context.locals().end(); it++){
 		std::cout << (*it).first << " " << (*it).second << "\n";
 	}*/
-	char gep_name[64];
-	sprintf(gep_name, "gep.load.%s.%s", array->name.c_str(), index->name.c_str());
 
 	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
 	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
-	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx),gep_name,context.currentBlock());
+	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
 	return new LoadInst(gep, "", false, context.currentBlock());
@@ -182,11 +180,10 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 
 Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
 	std::cout << "Creating array store " << array->name << " " << index->name << endl;
-	char gep_name[64];
-	sprintf(gep_name, "gep.store.%s.%s", array->name.c_str(), index->name.c_str());
+
 	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
 	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
-	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx),gep_name,context.currentBlock());
+	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
 	return new StoreInst(rhs,gep, "", false, context.currentBlock());
