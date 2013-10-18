@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
 #if 1
 	CodeGenContext context;
-	createCoreFunctions(context);
+//	createCoreFunctions(context);
 	context.generateCode(*programBlock);
 	compile(*context.module);
 #endif
