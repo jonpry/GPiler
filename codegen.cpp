@@ -173,10 +173,11 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 	sprintf(gep_name, "gep.load.%s.%s", array->name.c_str(), index->name.c_str());
 
 	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
-	Value* gep = GetElementPtrInst::Create(context.locals()[array->name], ArrayRef<Value*>(idx),gep_name,context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
+	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx),gep_name,context.currentBlock());
 	//cout << "Generated\n";
-	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
-	return new LoadInst(ld1, "", false, context.currentBlock());
+//	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
+	return new LoadInst(gep, "", false, context.currentBlock());
 }
 
 Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
@@ -184,10 +185,11 @@ Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
 	char gep_name[64];
 	sprintf(gep_name, "gep.store.%s.%s", array->name.c_str(), index->name.c_str());
 	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
-	Value* gep = GetElementPtrInst::Create(context.locals()[array->name], ArrayRef<Value*>(idx),gep_name,context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
+	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx),gep_name,context.currentBlock());
 	//cout << "Generated\n";
-	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
-	return new StoreInst(rhs,ld1, "", false, context.currentBlock());
+//	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
+	return new StoreInst(rhs,gep, "", false, context.currentBlock());
 }
 
 void addKernelMetadata(llvm::Function *F) {
