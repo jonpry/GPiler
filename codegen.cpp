@@ -170,7 +170,7 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 		std::cout << (*it).first << " " << (*it).second << "\n";
 	}*/
 	char gep_name[64];
-	sprintf(gep_name, "gep.load%s.%s", array->name.c_str(), index->name.c_str());
+	sprintf(gep_name, "gep.load.%s.%s", array->name.c_str(), index->name.c_str());
 
 	Value* gep = GetElementPtrInst::Create(context.locals()[array->name], ArrayRef<Value*>(context.locals()[index->name]),gep_name,context.currentBlock());
 	//cout << "Generated\n";

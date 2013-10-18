@@ -84,6 +84,7 @@ public:
 	NIdentifier* name;
 	IdList *vars;
 	NExpression* expr;
+	string anon_name;
 
 	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr) { }
 //	virtual llvm::Value* codeGen(CodeGenContext& context);

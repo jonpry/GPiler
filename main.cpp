@@ -34,6 +34,13 @@ std::string create_anon_name(void) {
 	return std::string(buf);
 }
 
+std::string create_temp_name(void) {
+	static unsigned idx = 0;
+	char buf[32];
+	sprintf(buf,"pipeline.temp%u",idx++);
+	return std::string(buf);
+}
+
 void rewrite_map(NMap *map) {
 }
 
@@ -79,11 +86,13 @@ NFunctionDeclaration *extract_func(NMap* map) {
 	func_block->expressions.push_back(assignment);
 	//func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
 
+	std::string anon_name = create_anon_name();
 	NFunctionDeclaration *anon_func = new NFunctionDeclaration(new NType("int32",0),
-			new NIdentifier(create_anon_name()),
+			new NIdentifier(anon_name),
 			var_list,
 			func_block
 			);
+	map->anon_name = anon_name;
 	return anon_func;
 }
 
@@ -97,7 +106,7 @@ void rewrite_maps(NBlock *pb) {
 		//delete **it.expr;
 		//**it.expr = new NMethodCall(anon_func->id, **it.
 	}
-	pb->statements.insert(pb->statements.end(), anon_funcs.begin(), anon_funcs.end());
+	pb->statements.insert(pb->statements.begin(), anon_funcs.begin(), anon_funcs.end());
 }
 
 void rewrite_arrays(NBlock* programBlock){
@@ -119,16 +128,30 @@ void rewrite_pipelines(NBlock *pb){
 			for(it2 = decl->block->expressions.begin(); it2 != decl->block->expressions.end(); it2++){
 				NPipeLine *pipe = dynamic_cast<NPipeLine*>(*it2);
 				if(pipe){
+					string temp_name = create_temp_name();
 					//Load it
 					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
-					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier("temp0"),iptr);
+					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier(temp_name),iptr);
 					decl->block->expressions.insert(it2,dec);
 
 					//TODO: the function calls
+					MapList::iterator it3;
+					for(it3 = pipe->chain->begin(); it3!= pipe->chain->end(); it3++){
+						NMap* map = *it3;
+						string new_name = create_temp_name();
+					
+						ExpressionList *args = new ExpressionList();
+						args->push_back(new NIdentifier(temp_name));
+						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
+						NVariableDeclaration *map_dec = new NVariableDeclaration(new NType("int32",0),new NIdentifier(new_name), mc);
+						decl->block->expressions.insert(it2,map_dec);						
+
+						temp_name = new_name;
+					}
 
 					//Store it
 					NArrayRef *sptr = new NArrayRef(pipe->dest,new NIdentifier("idx"));
-					NAssignment *store = new NAssignment(sptr,new NIdentifier("temp0"));
+					NAssignment *store = new NAssignment(sptr,new NIdentifier(temp_name));
 					decl->block->expressions.insert(it2,store);
 				}
 			}
