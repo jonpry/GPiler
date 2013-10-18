@@ -13,6 +13,16 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/IR/DataLayout.h"
 
+#define FOR_NV
+
+#ifdef FOR_NV
+	#define TRIPLE "nvptx64-unknown-unknown"
+	#define MARCH "nvptx64"
+#else
+	#define TRIPLE "x86_64-unknown-linux-gnu"
+	#define MARCH "x86-64"
+#endif
+
 void compile(Module &mod){
 	InitializeAllTargets();
   	InitializeAllTargetMCs();
@@ -29,14 +39,14 @@ void compile(Module &mod){
   	initializeUnreachableBlockElimPass(*Registry);
 
 
- 	mod.setTargetTriple(Triple::normalize("nvptx64-unknown-unknown"));
+ 	mod.setTargetTriple(Triple::normalize(TRIPLE));
 	Triple TheTriple(mod.getTargetTriple());
   	if (TheTriple.getTriple().empty())
 		cout << "Could not locate triple\n";
 	else
 		cout << "Triple: " << TheTriple.getTriple() << "\n";
 
-	std::string march = "nvptx64";
+	std::string march = MARCH;
 	const Target *TheTarget = 0;
     	for (TargetRegistry::iterator it = TargetRegistry::begin(); it != TargetRegistry::end(); ++it) {
 	//	cout << it->getName() << "\n";

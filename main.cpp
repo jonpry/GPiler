@@ -125,7 +125,7 @@ void rewrite_pipelines(NBlock *pb){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl){
 			ExpressionList::iterator it2;
-			for(it2 = decl->block->expressions.begin(); it2 != decl->block->expressions.end(); it2++){
+			for(it2 = decl->block->expressions.begin(); it2 != decl->block->expressions.end(); ){
 				NPipeLine *pipe = dynamic_cast<NPipeLine*>(*it2);
 				if(pipe){
 					string temp_name = create_temp_name();
@@ -134,7 +134,6 @@ void rewrite_pipelines(NBlock *pb){
 					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier(temp_name),iptr);
 					decl->block->expressions.insert(it2,dec);
 
-					//TODO: the function calls
 					MapList::iterator it3;
 					for(it3 = pipe->chain->begin(); it3!= pipe->chain->end(); it3++){
 						NMap* map = *it3;
@@ -153,6 +152,11 @@ void rewrite_pipelines(NBlock *pb){
 					NArrayRef *sptr = new NArrayRef(pipe->dest,new NIdentifier("idx"));
 					NAssignment *store = new NAssignment(sptr,new NIdentifier(temp_name));
 					decl->block->expressions.insert(it2,store);
+
+					//TODO: delete the pipeline now that it is dangling
+					it2 = decl->block->expressions.erase(it2);
+				}else{
+					it2++;
 				}
 			}
 		}
