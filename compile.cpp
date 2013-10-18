@@ -93,7 +93,8 @@ void compile(Module &mod){
 	std::auto_ptr<TargetMachine>
     		target(TheTarget->createTargetMachine(TheTriple.getTriple(),
                                           mcpu, FeaturesStr,
-                                          Options));
+                                          Options, Reloc::Default, CodeModel::Default,
+						CodeGenOpt::Aggressive));
 
  	assert(target.get() && "Could not allocate target machine!");
   	TargetMachine &Target = *target.get();
@@ -101,6 +102,8 @@ void compile(Module &mod){
 	// Build up all of the passes that we want to do to the module.
   	PassManager PM;
 	
+	// Add intenal analysis passes from the target machine.
+  	Target.addAnalysisPasses(PM);
 
   	// Add the target data from the target machine, if it exists, or the module.
  	if (const DataLayout *TD = Target.getDataLayout())
