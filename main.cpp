@@ -119,9 +119,17 @@ void rewrite_pipelines(NBlock *pb){
 			for(it2 = decl->block->expressions.begin(); it2 != decl->block->expressions.end(); it2++){
 				NPipeLine *pipe = dynamic_cast<NPipeLine*>(*it2);
 				if(pipe){
+					//Load it
 					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
 					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier("temp0"),iptr);
 					decl->block->expressions.insert(it2,dec);
+
+					//TODO: the function calls
+
+					//Store it
+					NArrayRef *sptr = new NArrayRef(pipe->dest,new NIdentifier("idx"));
+					NAssignment *store = new NAssignment(sptr,new NIdentifier("temp0"));
+					decl->block->expressions.insert(it2,store);
 				}
 			}
 		}

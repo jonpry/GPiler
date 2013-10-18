@@ -121,6 +121,9 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 Value* NAssignment::codeGen(CodeGenContext& context)
 {
+	if(array){
+		return array->store(context,rhs->codeGen(context));
+	}
 	std::cout << "Creating assignment for " << lhs->name << endl;
 	if (context.locals().find(lhs->name) == context.locals().end()) {
 		std::cerr << "undeclared variable " << lhs->name << endl;
@@ -160,20 +163,29 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 
 Value* NArrayRef::codeGen(CodeGenContext& context)
 {
-	//TODO:
 	std::cout << "Creating array reference " << array->name << " " << index->name << endl;
 
-	std::map<std::string, Value*>::iterator it;
+	/*std::map<std::string, Value*>::iterator it;
 	for(it = context.locals().begin(); it!= context.locals().end(); it++){
 		std::cout << (*it).first << " " << (*it).second << "\n";
-	}
+	}*/
 	char gep_name[64];
-	sprintf(gep_name, "gep.%s.%s", array->name.c_str(), index->name.c_str());
+	sprintf(gep_name, "gep.load%s.%s", array->name.c_str(), index->name.c_str());
 
 	Value* gep = GetElementPtrInst::Create(context.locals()[array->name], ArrayRef<Value*>(context.locals()[index->name]),gep_name,context.currentBlock());
-	cout << "Generated\n";
+	//cout << "Generated\n";
 	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
 	return new LoadInst(ld1, "", false, context.currentBlock());
+}
+
+Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
+	std::cout << "Creating array store " << array->name << " " << index->name << endl;
+	char gep_name[64];
+	sprintf(gep_name, "gep.store.%s.%s", array->name.c_str(), index->name.c_str());
+	Value* gep = GetElementPtrInst::Create(context.locals()[array->name], ArrayRef<Value*>(context.locals()[index->name]),gep_name,context.currentBlock());
+	//cout << "Generated\n";
+	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
+	return new StoreInst(rhs,ld1, "", false, context.currentBlock());
 }
 
 void addKernelMetadata(llvm::Function *F) {

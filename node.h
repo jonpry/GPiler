@@ -176,6 +176,7 @@ public:
 	NIdentifier *array, *index;
 	NArrayRef(NIdentifier *array, NIdentifier *index) : array(array), index(index) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+	llvm::Value* store(CodeGenContext& context, llvm::Value* rhs);
 
 	void print(ostream& os) { 
 		os << "Array Ref:\n";
@@ -190,14 +191,19 @@ class NAssignment : public NExpression {
 public:
 	NIdentifier *lhs;
 	NExpression *rhs;
+	NArrayRef *array;
 	int isReturn;
-	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs), isReturn(0) { }
+	NAssignment(NIdentifier *lhs, NExpression *rhs) : array(0), lhs(lhs), rhs(rhs), isReturn(0) { }
+	NAssignment(NArrayRef *array, NExpression *rhs) : array(array), lhs(0), rhs(rhs), isReturn(0) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) 
 	{ 
 		os << "Assignment: return: " << isReturn << "\n";
 		sTabs++;
-		os << *lhs;
+		if(lhs)
+			os << *lhs;
+		else
+			os << *array;
 		os << *rhs; 
 		sTabs--;
 	}
