@@ -19,14 +19,23 @@
 #include <llvm/ExecutionEngine/JIT.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include "node.h"
+
 using namespace llvm;
 
 class NBlock;
 
+class GValue{
+public:
+	Value* value;
+	GType type;
+	GValue(Value* value, GType type) : value(value), type(type) {}
+};
+
 class CodeGenBlock {
 public:
     BasicBlock *block;
-    std::map<std::string, Value*> locals;
+    std::map<std::string, GValue*> locals;
 };
 
 class CodeGenContext {
@@ -39,7 +48,7 @@ public:
     
     void generateCode(NBlock& root);
     GenericValue runCode();
-    std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
+    std::map<std::string, GValue*>& locals() { return blocks.top()->locals; }
     BasicBlock *currentBlock() { return blocks.top()->block; }
     void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock()); blocks.top()->block = block; }
     void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }

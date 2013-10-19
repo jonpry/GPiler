@@ -1,3 +1,6 @@
+#ifndef NODE_H
+#define NODE_H
+
 #include <iostream>
 #include <vector>
 #include <list>
@@ -29,6 +32,15 @@ typedef list<NIdentifier*> IdList;
 typedef list<NMap*> MapList;
 typedef list<Node*> NodeList;
 
+#define INT_TYPE 1
+#define FLOAT_TYPE 2
+#define VOID_TYPE 3
+
+struct GType {
+	int type;
+	int length;
+}; 
+
 class Node {
 public:
 	virtual ~Node() {}
@@ -51,6 +63,7 @@ public:
 class NExpression : public Node {
 public: 
 	void print(ostream& os) { os << "Unknown Expression\n"; }
+	virtual GType GetType(CodeGenContext& context) { cout << "Unknown type\n"; }
 };
 
 class NStatement : public Node {
@@ -80,6 +93,7 @@ public:
 	NIdentifier(const std::string& name) : name(name) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Identifier: " << name << "\n"; }
+	GType GetType(CodeGenContext& context);
 };
 
 class NMap : public NExpression {
@@ -116,6 +130,7 @@ public:
 	NType(const std::string& name, int isArray) : NIdentifier(name), isArray(isArray) { }	
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Type: " << name << " " << isArray << "\n"; }
+	GType GetType(CodeGenContext& context);
 };
 
 class NMethodCall : public NExpression {
@@ -321,3 +336,5 @@ public:
 		children.push_back(var);
 	}
 };
+
+#endif

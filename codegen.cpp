@@ -46,6 +46,8 @@ static Type *typeOf(const NType* type)
 		ret = Type::getInt16Ty(getGlobalContext());
 	}else if (type->name.compare("int8") == 0) {
 		ret = Type::getInt8Ty(getGlobalContext());
+	}else if (type->name.compare("bool") == 0) {
+		ret = Type::getInt32Ty(getGlobalContext());
 	}else if (type->name.compare("void") == 0) {
 		ret = Type::getVoidTy(getGlobalContext());
 	} else cout << "Error unknown type\n";
@@ -54,6 +56,28 @@ static Type *typeOf(const NType* type)
 		ret = PointerType::get(ret,1);//1 is global address space
 	}
 
+	return ret;
+}
+
+GType NType::GetType(CodeGenContext& context){
+	GType ret;
+	if (name.compare("int") == 0 || name.compare("int32") == 0) {
+		ret.type = INT_TYPE; ret.length = 32;
+	}else if (name.compare("int64") == 0) {
+		ret.type = INT_TYPE; ret.length = 64;
+	}else if (name.compare("double") == 0) {
+		ret.type = FLOAT_TYPE; ret.length = 32;
+	}else if (name.compare("float") == 0) {
+		ret.type = FLOAT_TYPE; ret.length = 64;
+	}else if (name.compare("int16") == 0) {
+		ret.type = INT_TYPE; ret.length = 32;
+	}else if (name.compare("int8") == 0) {
+		ret.type = INT_TYPE; ret.length = 8;
+	}else if (name.compare("bool") == 0) {
+		ret.type = INT_TYPE; ret.length = 32;
+	}else if (name.compare("void") == 0) {
+		ret.type = VOID_TYPE; ret.length = 0;
+	} else cout << "Error unknown type\n";
 	return ret;
 }
 
@@ -78,7 +102,7 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << name << endl;
 		return NULL;
 	}
-	return new LoadInst(context.locals()[name], "", false, context.currentBlock());
+	return new LoadInst(context.locals()[name]->value, "", false, context.currentBlock());
 }
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
@@ -97,18 +121,39 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 	return call;
 }
 
+GType NIdentifier::GetType(CodeGenContext& context) { 
+	return context.locals()[name]->type;
+}
+
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating binary operation " << op << endl;
 	Instruction::BinaryOps instr;
-	switch (op) {
-		case TPLUS: instr = Instruction::Add; break;
-		case TMINUS: instr = Instruction::Sub; break;
-		case TMUL: instr = Instruction::Mul; break;
-		case TDIV: instr = Instruction::SDiv; break;
-		default: cout << "Unknown op\n"; return 0;
-		/* TODO comparison */
+
+	GType ltype = lhs->GetType(context);
+	GType rtype = lhs->GetType(context);
+
+	//TODO: argument promotion
+	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
+		switch (op) {
+			case TPLUS: instr = Instruction::FAdd; break;
+			case TMINUS: instr = Instruction::FSub; break;
+			case TMUL: instr = Instruction::FMul; break;
+			case TDIV: instr = Instruction::FDiv; break;
+			default: cout << "Unknown op\n"; return 0;
+			/* TODO comparison */
+		}
+	}else{
+		switch (op) {
+			case TPLUS: instr = Instruction::Add; break;
+			case TMINUS: instr = Instruction::Sub; break;
+			case TMUL: instr = Instruction::Mul; break;
+			case TDIV: instr = Instruction::SDiv; break;
+			default: cout << "Unknown op\n"; return 0;
+			/* TODO comparison */
+		}
 	}
+
 	return BinaryOperator::Create(instr, lhs->codeGen(context),
 		rhs->codeGen(context), "", context.currentBlock());
 }
@@ -125,7 +170,7 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 	}
 	if(isReturn)
 		return ReturnInst::Create(getGlobalContext(), rhs->codeGen(context), context.currentBlock());
-	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name], false, context.currentBlock());
+	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name]->value, false, context.currentBlock());
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -143,7 +188,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating variable declaration " << type->name << " " << id->name << endl;
 	AllocaInst *alloc = new AllocaInst(typeOf(type), id->name.c_str(), context.currentBlock());
-	context.locals()[id->name] = alloc;
+	context.locals()[id->name] = new GValue(alloc,type->GetType(context));
 	if (assignmentExpr != NULL) {
 		NAssignment assn(id, assignmentExpr);
 		assn.codeGen(context);
@@ -160,8 +205,8 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 		std::cout << (*it).first << " " << (*it).second << "\n";
 	}*/
 
-	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
-	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
+	Value* idx = new LoadInst(context.locals()[index->name]->value, "", false, context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[array->name]->value, "", false, context.currentBlock());
 	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
@@ -171,8 +216,8 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
 	std::cout << "Creating array store " << array->name << " " << index->name << endl;
 
-	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
-	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
+	Value* idx = new LoadInst(context.locals()[index->name]->value, "", false, context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[array->name]->value, "", false, context.currentBlock());
 	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
@@ -225,7 +270,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
     	//		context.locals()[(*it)->id.name] = AI;
 
 		(*it)->codeGen(context);
-		new StoreInst((Value*)AI, context.locals()[ (*it)->id->name], false, context.currentBlock());
+		new StoreInst((Value*)AI, context.locals()[ (*it)->id->name]->value, false, context.currentBlock());
   	}
 
 	block->codeGen(context);
