@@ -480,11 +480,11 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    65,    65,    68,    69,    72,    73,    76,    77,    78,
-      79,    82,    85,    86,    89,    90,    94,    97,    98,   101,
-     102,   105,   108,   112,   113,   116,   117,   118,   121,   124,
-     125,   128,   130,   131,   132,   133,   134,   135,   136,   137,
-     138,   139,   140,   141,   142,   143,   146,   149,   150,   151
+       0,    84,    84,    87,    88,    91,    92,    95,    96,    97,
+      98,   101,   104,   105,   108,   109,   113,   116,   117,   120,
+     121,   124,   127,   131,   132,   135,   136,   137,   140,   143,
+     144,   147,   149,   150,   151,   152,   153,   154,   155,   156,
+     157,   158,   159,   160,   161,   162,   165,   168,   169,   170
 };
 #endif
 
@@ -1479,294 +1479,294 @@ yyreduce:
         case 2:
 
 /* Line 1806 of yacc.c  */
-#line 65 "parser.y"
+#line 84 "parser.y"
     { programBlock = (yyvsp[(1) - (1)].block); }
     break;
 
   case 3:
 
 /* Line 1806 of yacc.c  */
-#line 68 "parser.y"
+#line 87 "parser.y"
     { (yyval.block) = new NBlock(); (yyval.block)->children.push_back((yyvsp[(1) - (1)].stmt)); }
     break;
 
   case 4:
 
 /* Line 1806 of yacc.c  */
-#line 69 "parser.y"
+#line 88 "parser.y"
     { (yyvsp[(1) - (2)].block)->children.push_back((yyvsp[(2) - (2)].stmt)); }
     break;
 
   case 5:
 
 /* Line 1806 of yacc.c  */
-#line 72 "parser.y"
+#line 91 "parser.y"
     { (yyval.block) = new NBlock(); (yyval.block)->children.push_back((yyvsp[(1) - (1)].expr)); }
     break;
 
   case 6:
 
 /* Line 1806 of yacc.c  */
-#line 73 "parser.y"
+#line 92 "parser.y"
     { (yyvsp[(1) - (2)].block)->children.push_back((yyvsp[(2) - (2)].expr)); }
     break;
 
   case 11:
 
 /* Line 1806 of yacc.c  */
-#line 82 "parser.y"
+#line 101 "parser.y"
     {(yyval.expr) = new NPipeLine((yyvsp[(1) - (5)].ident),(yyvsp[(5) - (5)].ident),(yyvsp[(3) - (5)].pipevec)); }
     break;
 
   case 12:
 
 /* Line 1806 of yacc.c  */
-#line 85 "parser.y"
+#line 104 "parser.y"
     { (yyval.pipevec) = new MapList(); (yyval.pipevec)->push_back((yyvsp[(1) - (1)].map)); }
     break;
 
   case 13:
 
 /* Line 1806 of yacc.c  */
-#line 86 "parser.y"
+#line 105 "parser.y"
     { (yyvsp[(1) - (3)].pipevec)->push_back((yyvsp[(3) - (3)].map)); }
     break;
 
   case 14:
 
 /* Line 1806 of yacc.c  */
-#line 89 "parser.y"
+#line 108 "parser.y"
     { (yyval.fvarvec) = new IdList(); (yyval.fvarvec)->push_back((yyvsp[(1) - (1)].ident)); }
     break;
 
   case 15:
 
 /* Line 1806 of yacc.c  */
-#line 90 "parser.y"
+#line 109 "parser.y"
     { (yyvsp[(1) - (3)].fvarvec)->push_back((yyvsp[(3) - (3)].ident)); }
     break;
 
   case 16:
 
 /* Line 1806 of yacc.c  */
-#line 94 "parser.y"
+#line 113 "parser.y"
     { (yyval.map) = new NMap((yyvsp[(1) - (6)].ident),(yyvsp[(3) - (6)].fvarvec),(yyvsp[(5) - (6)].expr)); }
     break;
 
   case 17:
 
 /* Line 1806 of yacc.c  */
-#line 97 "parser.y"
+#line 116 "parser.y"
     { (yyval.block) = (yyvsp[(2) - (3)].block); }
     break;
 
   case 18:
 
 /* Line 1806 of yacc.c  */
-#line 98 "parser.y"
+#line 117 "parser.y"
     { (yyval.block) = new NBlock(); }
     break;
 
   case 19:
 
 /* Line 1806 of yacc.c  */
-#line 101 "parser.y"
+#line 120 "parser.y"
     { (yyval.expr) = new NVariableDeclaration((yyvsp[(1) - (2)].type), (yyvsp[(2) - (2)].ident)); }
     break;
 
   case 20:
 
 /* Line 1806 of yacc.c  */
-#line 102 "parser.y"
+#line 121 "parser.y"
     { (yyval.expr) = new NVariableDeclaration((yyvsp[(1) - (4)].type), (yyvsp[(2) - (4)].ident), (yyvsp[(4) - (4)].expr)); }
     break;
 
   case 21:
 
 /* Line 1806 of yacc.c  */
-#line 105 "parser.y"
+#line 124 "parser.y"
     { (yyval.expr) = new NVariableDeclaration((yyvsp[(1) - (2)].type), (yyvsp[(2) - (2)].ident)); }
     break;
 
   case 22:
 
 /* Line 1806 of yacc.c  */
-#line 109 "parser.y"
+#line 128 "parser.y"
     { (yyval.stmt) = new NFunctionDeclaration((yyvsp[(1) - (6)].type), (yyvsp[(2) - (6)].ident), (yyvsp[(4) - (6)].varvec), (yyvsp[(6) - (6)].block)); }
     break;
 
   case 23:
 
 /* Line 1806 of yacc.c  */
-#line 112 "parser.y"
+#line 131 "parser.y"
     { (yyval.type) = new NType(*(yyvsp[(1) - (1)].string),0); delete (yyvsp[(1) - (1)].string); }
     break;
 
   case 24:
 
 /* Line 1806 of yacc.c  */
-#line 113 "parser.y"
+#line 132 "parser.y"
     { (yyval.type) = new NType(*(yyvsp[(2) - (3)].string),1); delete (yyvsp[(2) - (3)].string); }
     break;
 
   case 25:
 
 /* Line 1806 of yacc.c  */
-#line 116 "parser.y"
+#line 135 "parser.y"
     { (yyval.varvec) = new VariableList(); }
     break;
 
   case 26:
 
 /* Line 1806 of yacc.c  */
-#line 117 "parser.y"
+#line 136 "parser.y"
     { (yyval.varvec) = new VariableList(); (yyval.varvec)->push_back((yyvsp[(1) - (1)].var_decl)); }
     break;
 
   case 27:
 
 /* Line 1806 of yacc.c  */
-#line 118 "parser.y"
+#line 137 "parser.y"
     { (yyvsp[(1) - (3)].varvec)->push_back((yyvsp[(3) - (3)].var_decl)); }
     break;
 
   case 28:
 
 /* Line 1806 of yacc.c  */
-#line 121 "parser.y"
+#line 140 "parser.y"
     { (yyval.ident) = new NIdentifier(*(yyvsp[(1) - (1)].string)); delete (yyvsp[(1) - (1)].string); }
     break;
 
   case 29:
 
 /* Line 1806 of yacc.c  */
-#line 124 "parser.y"
+#line 143 "parser.y"
     { (yyval.expr) = new NInteger(atol((yyvsp[(1) - (1)].string)->c_str())); delete (yyvsp[(1) - (1)].string); }
     break;
 
   case 30:
 
 /* Line 1806 of yacc.c  */
-#line 125 "parser.y"
+#line 144 "parser.y"
     { (yyval.expr) = new NDouble(atof((yyvsp[(1) - (1)].string)->c_str())); delete (yyvsp[(1) - (1)].string); }
     break;
 
   case 31:
 
 /* Line 1806 of yacc.c  */
-#line 128 "parser.y"
+#line 147 "parser.y"
     { (yyval.expr) = new NAssignment((yyvsp[(1) - (3)].ident), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 32:
 
 /* Line 1806 of yacc.c  */
-#line 130 "parser.y"
+#line 149 "parser.y"
     { (yyval.ident) = (yyvsp[(1) - (1)].ident); }
     break;
 
   case 34:
 
 /* Line 1806 of yacc.c  */
-#line 132 "parser.y"
+#line 151 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 35:
 
 /* Line 1806 of yacc.c  */
-#line 133 "parser.y"
+#line 152 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 36:
 
 /* Line 1806 of yacc.c  */
-#line 134 "parser.y"
+#line 153 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 37:
 
 /* Line 1806 of yacc.c  */
-#line 135 "parser.y"
+#line 154 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 38:
 
 /* Line 1806 of yacc.c  */
-#line 136 "parser.y"
+#line 155 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 39:
 
 /* Line 1806 of yacc.c  */
-#line 137 "parser.y"
+#line 156 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 40:
 
 /* Line 1806 of yacc.c  */
-#line 138 "parser.y"
+#line 157 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 41:
 
 /* Line 1806 of yacc.c  */
-#line 139 "parser.y"
+#line 158 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 42:
 
 /* Line 1806 of yacc.c  */
-#line 140 "parser.y"
+#line 159 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 43:
 
 /* Line 1806 of yacc.c  */
-#line 141 "parser.y"
+#line 160 "parser.y"
     { (yyval.expr) = new NBinaryOperator((yyvsp[(1) - (3)].expr), (yyvsp[(2) - (3)].token), (yyvsp[(3) - (3)].expr)); }
     break;
 
   case 44:
 
 /* Line 1806 of yacc.c  */
-#line 142 "parser.y"
+#line 161 "parser.y"
     { (yyval.expr) = (yyvsp[(2) - (3)].expr); }
     break;
 
   case 46:
 
 /* Line 1806 of yacc.c  */
-#line 146 "parser.y"
+#line 165 "parser.y"
     { (yyval.expr) = new NMethodCall((yyvsp[(1) - (4)].ident), (yyvsp[(3) - (4)].exprvec)); }
     break;
 
   case 47:
 
 /* Line 1806 of yacc.c  */
-#line 149 "parser.y"
+#line 168 "parser.y"
     { (yyval.exprvec) = new ExpressionList(); }
     break;
 
   case 48:
 
 /* Line 1806 of yacc.c  */
-#line 150 "parser.y"
+#line 169 "parser.y"
     { (yyval.exprvec) = new ExpressionList(); (yyval.exprvec)->push_back((yyvsp[(1) - (1)].expr)); }
     break;
 
   case 49:
 
 /* Line 1806 of yacc.c  */
-#line 151 "parser.y"
+#line 170 "parser.y"
     { (yyvsp[(1) - (3)].exprvec)->push_back((yyvsp[(3) - (3)].expr)); }
     break;
 
@@ -2004,6 +2004,6 @@ yyreturn:
 
 
 /* Line 2067 of yacc.c  */
-#line 154 "parser.y"
+#line 173 "parser.y"
 
 

@@ -43,6 +43,25 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
    calling an (NIdentifier*). It makes the compiler happy.
  */
 %type <ident> ident 
+/* 
+GPiler - parser.y
+Copyright (C) 2013 Jon Pry and Charles Cooper
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 %type <type> type
 %type <expr> numeric expr assignment func_call pipeline stmt var_decl func_decl_arg 
 %type <varvec> func_decl_args
