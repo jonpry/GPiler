@@ -39,6 +39,8 @@ typedef list<Node*> NodeList;
 struct GType {
 	int type;
 	int length;
+	GType(int type, int length) : type(type), length(length) {}
+	GType(){}
 }; 
 
 class Node {
@@ -77,6 +79,7 @@ public:
 	NInteger(long long value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Integer: " << value << "\n"; }
+	virtual GType GetType(CodeGenContext& context) { return GType(INT_TYPE,32);}
 };
 
 class NDouble : public NExpression {
@@ -85,6 +88,7 @@ public:
 	NDouble(double value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Double: " << value << "\n"; }
+	virtual GType GetType(CodeGenContext& context) { return GType(FLOAT_TYPE,64);}
 };
 
 class NIdentifier : public NExpression {

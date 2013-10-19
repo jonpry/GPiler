@@ -1,4 +1,4 @@
 
 [double] mapit([double] input){
-	input :: map(x : x*x) :: map(x : x + x) > return;
+	input :: map(x : x*x) :: map(x : x + 1) > return;
 }

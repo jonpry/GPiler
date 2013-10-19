@@ -59,6 +59,29 @@ static Type *typeOf(const NType* type)
 	return ret;
 }
 
+/* Returns an LLVM type based on GType */
+static Type *typeOf(GType type)
+{
+	Type* ret=0;
+	if (type.type == INT_TYPE && type.length==32) {
+		ret = Type::getInt32Ty(getGlobalContext());
+	}else if (type.type == INT_TYPE && type.length==64) {
+		ret = Type::getInt64Ty(getGlobalContext());
+	}else if (type.type == FLOAT_TYPE && type.length==64) {
+		ret = Type::getDoubleTy(getGlobalContext());
+	}else if (type.type == FLOAT_TYPE && type.length==32) {
+		ret = Type::getFloatTy(getGlobalContext());
+	}else if (type.type == INT_TYPE && type.length==16) {
+		ret = Type::getInt16Ty(getGlobalContext());
+	}else if (type.type == INT_TYPE && type.length==8) {
+		ret = Type::getInt8Ty(getGlobalContext());
+	}else if (type.type == VOID_TYPE) {
+		ret = Type::getVoidTy(getGlobalContext());
+	} else cout << "Error unknown type\n";
+
+	return ret;
+}
+
 GType NType::GetType(CodeGenContext& context){
 	GType ret;
 	if (name.compare("int") == 0 || name.compare("int32") == 0) {
@@ -66,9 +89,9 @@ GType NType::GetType(CodeGenContext& context){
 	}else if (name.compare("int64") == 0) {
 		ret.type = INT_TYPE; ret.length = 64;
 	}else if (name.compare("double") == 0) {
-		ret.type = FLOAT_TYPE; ret.length = 32;
-	}else if (name.compare("float") == 0) {
 		ret.type = FLOAT_TYPE; ret.length = 64;
+	}else if (name.compare("float") == 0) {
+		ret.type = FLOAT_TYPE; ret.length = 32;
 	}else if (name.compare("int16") == 0) {
 		ret.type = INT_TYPE; ret.length = 32;
 	}else if (name.compare("int8") == 0) {
@@ -130,11 +153,24 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 	std::cout << "Creating binary operation " << op << endl;
 	Instruction::BinaryOps instr;
 
+	Value *lhc, *rhc;
+
 	GType ltype = lhs->GetType(context);
-	GType rtype = lhs->GetType(context);
+	GType rtype = rhs->GetType(context);
 
 	//TODO: argument promotion
 	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
+		lhc = lhs->codeGen(context);
+		rhc = rhs->codeGen(context);
+
+		if(rtype.type != FLOAT_TYPE){
+			rhc = new SIToFPInst(rhc,typeOf(ltype),"", context.currentBlock());
+		}
+
+		if(ltype.type != FLOAT_TYPE){
+			lhc = new SIToFPInst(lhc,typeOf(rtype),"", context.currentBlock());
+		}
+
 		switch (op) {
 			case TPLUS: instr = Instruction::FAdd; break;
 			case TMINUS: instr = Instruction::FSub; break;
@@ -143,6 +179,7 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			default: cout << "Unknown op\n"; return 0;
 			/* TODO comparison */
 		}
+
 	}else{
 		switch (op) {
 			case TPLUS: instr = Instruction::Add; break;
@@ -152,10 +189,12 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			default: cout << "Unknown op\n"; return 0;
 			/* TODO comparison */
 		}
+		lhc = lhs->codeGen(context);
+		rhc = rhs->codeGen(context);
 	}
 
-	return BinaryOperator::Create(instr, lhs->codeGen(context),
-		rhs->codeGen(context), "", context.currentBlock());
+	return BinaryOperator::Create(instr, lhc,
+		rhc, "", context.currentBlock());
 }
 
 Value* NAssignment::codeGen(CodeGenContext& context)
@@ -189,6 +228,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 	std::cout << "Creating variable declaration " << type->name << " " << id->name << endl;
 	AllocaInst *alloc = new AllocaInst(typeOf(type), id->name.c_str(), context.currentBlock());
 	context.locals()[id->name] = new GValue(alloc,type->GetType(context));
+	//cout << context.locals()[id->name]->type.length;
 	if (assignmentExpr != NULL) {
 		NAssignment assn(id, assignmentExpr);
 		assn.codeGen(context);
