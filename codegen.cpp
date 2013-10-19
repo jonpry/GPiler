@@ -9,17 +9,7 @@ void CodeGenContext::generateCode(NBlock& root)
 {
 	std::cout << "Generating code...\n";
 
-	/* Create the top level interpreter function to call as entry */
-//	vector<Type*> argTypes;
-//	FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), makeArrayRef(argTypes), false);
-//	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
-//	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mainFunction, 0);
-
-	/* Push a new variable/block context */
-//	pushBlock(bblock);
 	root.codeGen(*this); /* emit bytecode for the toplevel block */
-//	ReturnInst::Create(getGlobalContext(), bblock);
-//	popBlock();
 
 	/* Print the bytecode in a human-readable format
 	to see if our program compiled properly
@@ -137,11 +127,7 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 Value* NBlock::codeGen(CodeGenContext& context)
 {
 	Value *last = NULL;
-	for (StatementList::const_iterator it = statements.begin(); it != statements.end(); it++) {
-		std::cout << "Generating code for " << typeid(**it).name() << endl;
-		last = (**it).codeGen(context);
-	}
-	for (ExpressionList::const_iterator it = expressions.begin(); it != expressions.end(); it++) {
+	for (NodeList::const_iterator it = children.begin(); it != children.end(); it++) {
 		std::cout << "Generating code for " << typeid(**it).name() << endl;
 		last = (**it).codeGen(context);
 	}

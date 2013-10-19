@@ -1487,28 +1487,28 @@ yyreduce:
 
 /* Line 1806 of yacc.c  */
 #line 68 "parser.y"
-    { (yyval.block) = new NBlock(); (yyval.block)->statements.push_back((yyvsp[(1) - (1)].stmt)); }
+    { (yyval.block) = new NBlock(); (yyval.block)->children.push_back((yyvsp[(1) - (1)].stmt)); }
     break;
 
   case 4:
 
 /* Line 1806 of yacc.c  */
 #line 69 "parser.y"
-    { (yyvsp[(1) - (2)].block)->statements.push_back((yyvsp[(2) - (2)].stmt)); }
+    { (yyvsp[(1) - (2)].block)->children.push_back((yyvsp[(2) - (2)].stmt)); }
     break;
 
   case 5:
 
 /* Line 1806 of yacc.c  */
 #line 72 "parser.y"
-    { (yyval.block) = new NBlock(); (yyval.block)->expressions.push_back((yyvsp[(1) - (1)].expr)); }
+    { (yyval.block) = new NBlock(); (yyval.block)->children.push_back((yyvsp[(1) - (1)].expr)); }
     break;
 
   case 6:
 
 /* Line 1806 of yacc.c  */
 #line 73 "parser.y"
-    { (yyvsp[(1) - (2)].block)->expressions.push_back((yyvsp[(2) - (2)].expr)); }
+    { (yyvsp[(1) - (2)].block)->children.push_back((yyvsp[(2) - (2)].expr)); }
     break;
 
   case 11:

@@ -17,14 +17,14 @@ void compile(Module &mod);
 void rewrite_arrays(NFunctionDeclaration *decl){
 	if(decl->type->isArray){
 		NType *old_type = decl->type;
-		decl->type = new NType("void",0);
+		decl->SetType(new NType("void",0));
 
 		NVariableDeclaration *var = new NVariableDeclaration(old_type,new NIdentifier("return"),0);
-		decl->arguments->insert(decl->arguments->begin(),var);
+		decl->InsertArgument(decl->arguments->begin(),var);
 	}
 
 	NVariableDeclaration *idxvar = new NVariableDeclaration(new NType("int32",0),new NIdentifier("idx"),0);
-	decl->arguments->insert(decl->arguments->begin(),idxvar);
+	decl->InsertArgument(decl->arguments->begin(),idxvar);
 }
 
 std::string create_anon_name(void) {
@@ -44,9 +44,9 @@ std::string create_temp_name(void) {
 void rewrite_map(NMap *map) {
 }
 
-std::vector<NMap*> extract_maps(ExpressionList &el) {
+std::vector<NMap*> extract_maps2(NodeList &el) {
 	std::vector<NMap*> ret;
-	for (ExpressionList::iterator it = el.begin(); it != el.end(); it++) {
+	for (NodeList::iterator it = el.begin(); it != el.end(); it++) {
 		NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it);
 		if (pipeline) {
 			ret.insert(ret.end(), pipeline->chain->begin(), pipeline->chain->end());
@@ -56,12 +56,12 @@ std::vector<NMap*> extract_maps(ExpressionList &el) {
 }
 
 // walk ast and get all maps
-MapList extract_maps(StatementList &sl) {
+MapList extract_maps(NodeList &sl) {
 	MapList ret;
-	for(StatementList::iterator it = sl.begin(); it != sl.end(); it++) {
+	for(NodeList::iterator it = sl.begin(); it != sl.end(); it++) {
 		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(func) {
-			std::vector<NMap*> maps = extract_maps(func->block->expressions);
+			std::vector<NMap*> maps = extract_maps2(func->block->children);
 			ret.insert(ret.end(), maps.begin(), maps.end());
 		}
 	}
@@ -69,7 +69,7 @@ MapList extract_maps(StatementList &sl) {
 }
 
 MapList extract_maps(NBlock *pb) {
-	return extract_maps(pb->statements);
+	return extract_maps(pb->children);
 }
 
 
@@ -83,7 +83,7 @@ NFunctionDeclaration *extract_func(NMap* map) {
 
 	NAssignment *assignment = new NAssignment(*(map->vars->begin()), map->expr);
 	assignment->isReturn = 1;
-	func_block->expressions.push_back(assignment);
+	func_block->children.push_back(assignment);
 	//func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
 
 	std::string anon_name = create_anon_name();
@@ -106,12 +106,12 @@ void rewrite_maps(NBlock *pb) {
 		//delete **it.expr;
 		//**it.expr = new NMethodCall(anon_func->id, **it.
 	}
-	pb->statements.insert(pb->statements.begin(), anon_funcs.begin(), anon_funcs.end());
+	pb->children.insert(pb->children.begin(), anon_funcs.begin(), anon_funcs.end());
 }
 
 void rewrite_arrays(NBlock* programBlock){
-	StatementList::iterator it;
-	for(it = programBlock->statements.begin(); it != programBlock->statements.end(); it++){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl){
 			rewrite_arrays(decl);
@@ -120,19 +120,19 @@ void rewrite_arrays(NBlock* programBlock){
 }
 
 void rewrite_pipelines(NBlock *pb){
-	StatementList::iterator it;
-	for(it = programBlock->statements.begin(); it != programBlock->statements.end(); it++){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl){
-			ExpressionList::iterator it2;
-			for(it2 = decl->block->expressions.begin(); it2 != decl->block->expressions.end(); ){
+			NodeList::iterator it2;
+			for(it2 = decl->block->children.begin(); it2 != decl->block->children.end(); ){
 				NPipeLine *pipe = dynamic_cast<NPipeLine*>(*it2);
 				if(pipe){
 					string temp_name = create_temp_name();
 					//Load it
 					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
 					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier(temp_name),iptr);
-					decl->block->expressions.insert(it2,dec);
+					decl->block->children.insert(it2,dec);
 
 					MapList::iterator it3;
 					for(it3 = pipe->chain->begin(); it3!= pipe->chain->end(); it3++){
@@ -143,7 +143,7 @@ void rewrite_pipelines(NBlock *pb){
 						args->push_back(new NIdentifier(temp_name));
 						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
 						NVariableDeclaration *map_dec = new NVariableDeclaration(new NType("int32",0),new NIdentifier(new_name), mc);
-						decl->block->expressions.insert(it2,map_dec);						
+						decl->block->children.insert(it2,map_dec);						
 
 						temp_name = new_name;
 					}
@@ -151,10 +151,10 @@ void rewrite_pipelines(NBlock *pb){
 					//Store it
 					NArrayRef *sptr = new NArrayRef(pipe->dest,new NIdentifier("idx"));
 					NAssignment *store = new NAssignment(sptr,new NIdentifier(temp_name));
-					decl->block->expressions.insert(it2,store);
+					decl->block->children.insert(it2,store);
 
 					//TODO: delete the pipeline now that it is dangling
-					it2 = decl->block->expressions.erase(it2);
+					it2 = decl->block->children.erase(it2);
 				}else{
 					it2++;
 				}

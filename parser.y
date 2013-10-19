@@ -65,12 +65,12 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 program : func_decls { programBlock = $1; }
 	;
 
-func_decls : func_decl { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
-	| func_decls func_decl { $1->statements.push_back($<stmt>2); }
+func_decls : func_decl { $$ = new NBlock(); $$->children.push_back($<stmt>1); }
+	| func_decls func_decl { $1->children.push_back($<stmt>2); }
 	;
 
-stmts : stmt { $$ = new NBlock(); $$->expressions.push_back($<expr>1); }
-	| stmts stmt { $1->expressions.push_back($<expr>2); }
+stmts : stmt { $$ = new NBlock(); $$->children.push_back($<expr>1); }
+	| stmts stmt { $1->children.push_back($<expr>2); }
 	;
 
 stmt : var_decl TSEMI

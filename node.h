@@ -27,11 +27,14 @@ typedef list<NExpression*> ExpressionList;
 typedef list<NVariableDeclaration*> VariableList;
 typedef list<NIdentifier*> IdList;
 typedef list<NMap*> MapList;
+typedef list<Node*> NodeList;
 
 class Node {
 public:
 	virtual ~Node() {}
 	virtual llvm::Value* codeGen(CodeGenContext& context) { }
+
+	NodeList children;
 
 	virtual void print(ostream& os) { os << "Unknown Node\n"; }
 	friend ostream& operator<<(ostream& os, Node &node)
@@ -86,7 +89,13 @@ public:
 	NExpression* expr;
 	string anon_name;
 
-	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr) { }
+	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr) { 
+		children.push_back(name);
+		for(IdList::iterator it = vars->begin(); it!=vars->end(); it++)
+			children.push_back(*it);
+		children.push_back(expr);
+	}
+
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Map:\n";
@@ -113,8 +122,17 @@ class NMethodCall : public NExpression {
 public:
 	NIdentifier* id;
 	ExpressionList* arguments;
-	NMethodCall(NIdentifier *id, ExpressionList* arguments) : id(id), arguments(arguments) { }
-	NMethodCall(NIdentifier *id) : id(id) { }
+	NMethodCall(NIdentifier *id, ExpressionList* arguments) : id(id), arguments(arguments) { 
+		children.push_back(id);
+		if(arguments){
+			for(ExpressionList::iterator it = arguments->begin(); it != arguments->end(); it++){
+				children.push_back(*it);
+			}
+		}
+	}
+	NMethodCall(NIdentifier *id) : id(id) {
+		children.push_back(id);
+	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
@@ -132,7 +150,15 @@ class NPipeLine : public NExpression {
 public:
 	NIdentifier *dest, *src;
 	MapList *chain;
-	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : src(src), chain(chain), dest(dest) { }
+	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : src(src), chain(chain), dest(dest) {
+		children.push_back(dest);
+		children.push_back(src);
+		if(chain){
+			for(MapList::iterator it = chain->begin(); it!=chain->end(); it++){
+				children.push_back(*it);
+			}
+		}
+ 	}
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
@@ -153,7 +179,10 @@ class NBinaryOperator : public NExpression {
 public:
 	int op;
 	NExpression *lhs, *rhs;
-	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : lhs(lhs), rhs(rhs), op(op) { }
+	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : lhs(lhs), rhs(rhs), op(op) { 
+		children.push_back(lhs);
+		children.push_back(rhs);
+	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
@@ -175,7 +204,10 @@ public:
 class NArrayRef : public NExpression {
 public:
 	NIdentifier *array, *index;
-	NArrayRef(NIdentifier *array, NIdentifier *index) : array(array), index(index) { }
+	NArrayRef(NIdentifier *array, NIdentifier *index) : array(array), index(index) { 
+		children.push_back(array);
+		children.push_back(index);
+	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	llvm::Value* store(CodeGenContext& context, llvm::Value* rhs);
 
@@ -194,9 +226,17 @@ public:
 	NExpression *rhs;
 	NArrayRef *array;
 	int isReturn;
-	NAssignment(NIdentifier *lhs, NExpression *rhs) : array(0), lhs(lhs), rhs(rhs), isReturn(0) { }
-	NAssignment(NArrayRef *array, NExpression *rhs) : array(array), lhs(0), rhs(rhs), isReturn(0) { }
+	NAssignment(NIdentifier *lhs, NExpression *rhs) : array(0), lhs(lhs), rhs(rhs), isReturn(0) {init(); }
+	NAssignment(NArrayRef *array, NExpression *rhs) : array(array), lhs(0), rhs(rhs), isReturn(0) {init(); }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+
+	void init(){
+		if(lhs)
+			children.push_back(lhs);
+		children.push_back(rhs);
+		if(array)
+			children.push_back(array);
+	}
 	void print(ostream& os) 
 	{ 
 		os << "Assignment: return: " << isReturn << "\n";
@@ -212,17 +252,12 @@ public:
 
 class NBlock : public NExpression {
 public:
-	StatementList statements;
-	ExpressionList expressions;
 	NBlock() { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Block: \n"; 
 		sTabs++;
-		for(StatementList::iterator it = statements.begin(); it!= statements.end(); it++){
-			os << **it;
-		}
-		for(ExpressionList::iterator it = expressions.begin(); it!= expressions.end(); it++){
+		for(NodeList::iterator it = children.begin(); it!= children.end(); it++){
 			os << **it;
 		}
 		sTabs--;
@@ -255,7 +290,15 @@ public:
 	VariableList *arguments;
 	NBlock *block;
 	NFunctionDeclaration(NType* type, NIdentifier* id, VariableList* arguments, NBlock *block) :
-	type(type), id(id), arguments(arguments), block(block) { }
+			type(type), id(id), arguments(arguments), block(block) { 
+		children.push_back(type);
+		children.push_back(id);
+		if(arguments){
+			for(VariableList::iterator it = arguments->begin(); it!= arguments->end(); it++)
+				children.push_back(*it);
+		}
+		children.push_back(block);
+	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		os << "Function decl:\n"; 
@@ -266,5 +309,15 @@ public:
 			os << **it;
 		os << *block;	
  		sTabs--;
+	}
+
+	void SetType(NType* new_type){
+		children.remove(type);
+		type = new_type;
+	}
+
+	void InsertArgument(VariableList::iterator at, NVariableDeclaration *var){
+		arguments->insert(at,var);
+		children.push_back(var);
 	}
 };
