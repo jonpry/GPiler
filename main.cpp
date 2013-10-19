@@ -41,43 +41,23 @@ std::string create_temp_name(void) {
 	return std::string(buf);
 }
 
-void rewrite_map(NMap *map) {
-}
-
-std::vector<NMap*> extract_maps2(NodeList &el) {
-	std::vector<NMap*> ret;
-	for (NodeList::iterator it = el.begin(); it != el.end(); it++) {
-		NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it);
-		if (pipeline) {
-			ret.insert(ret.end(), pipeline->chain->begin(), pipeline->chain->end());
+static NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var){
+	for(VariableList::iterator it = decl->arguments->begin(); it != decl->arguments->end(); it++){
+		NVariableDeclaration *vdec = *it;
+		if(vdec->id->name.compare(var->name) == 0){
+			return new NType(vdec->type->name,0);
 		}
 	}
-	return ret;
+	//TODO: search function block for declarations too
+	cout << "Couldn't find var\n";
+	return 0;
 }
 
-// walk ast and get all maps
-MapList extract_maps(NodeList &sl) {
-	MapList ret;
-	for(NodeList::iterator it = sl.begin(); it != sl.end(); it++) {
-		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
-		if(func) {
-			std::vector<NMap*> maps = extract_maps2(func->block->children);
-			ret.insert(ret.end(), maps.begin(), maps.end());
-		}
-	}
-	return ret;
-}
-
-MapList extract_maps(NBlock *pb) {
-	return extract_maps(pb->children);
-}
-
-
-NFunctionDeclaration *extract_func(NMap* map) {
+NFunctionDeclaration *extract_func(NMap* map,NType* type) {
 	VariableList *var_list = new VariableList;
 	// turn ids into vars
 	for (IdList::iterator it = map->vars->begin(); it != map->vars->end(); it++) {
-		var_list->push_back(new NVariableDeclaration(new NType("int32",0), *it));
+		var_list->push_back(new NVariableDeclaration(type, *it));
 	}
 	NBlock *func_block = new NBlock();
 
@@ -87,7 +67,7 @@ NFunctionDeclaration *extract_func(NMap* map) {
 	//func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
 
 	std::string anon_name = create_anon_name();
-	NFunctionDeclaration *anon_func = new NFunctionDeclaration(new NType("int32",0),
+	NFunctionDeclaration *anon_func = new NFunctionDeclaration(type,
 			new NIdentifier(anon_name),
 			var_list,
 			func_block
@@ -97,16 +77,20 @@ NFunctionDeclaration *extract_func(NMap* map) {
 }
 
 void rewrite_maps(NBlock *pb) {
-	MapList maps = extract_maps(pb);
-	std::vector<NFunctionDeclaration*> anon_funcs;
-	for (MapList::iterator it = maps.begin(); it != maps.end(); ++it) {
-		NFunctionDeclaration *anon_func = extract_func(*it);
-		anon_funcs.push_back(anon_func);
-		// TODO rewrite map to method call
-		//delete **it.expr;
-		//**it.expr = new NMethodCall(anon_func->id, **it.
+	for(NodeList::iterator it = pb->children.begin(); it != pb->children.end(); it++) {
+		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(func) {
+			for (NodeList::iterator it2 = func->block->children.begin(); it2 != func->block->children.end(); it2++) {
+				NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it2);
+				if (pipeline) {
+					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
+						NFunctionDeclaration *anon_func = extract_func(*it3, typeOf(func,pipeline->src));
+						pb->children.insert(pb->children.begin(), anon_func);
+					}
+				}
+			}
+		}
 	}
-	pb->children.insert(pb->children.begin(), anon_funcs.begin(), anon_funcs.end());
 }
 
 void rewrite_arrays(NBlock* programBlock){
@@ -131,7 +115,7 @@ void rewrite_pipelines(NBlock *pb){
 					string temp_name = create_temp_name();
 					//Load it
 					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
-					NVariableDeclaration *dec = new NVariableDeclaration(new NType("int32",0), new NIdentifier(temp_name),iptr);
+					NVariableDeclaration *dec = new NVariableDeclaration(typeOf(decl,pipe->src), new NIdentifier(temp_name),iptr);
 					decl->block->children.insert(it2,dec);
 
 					MapList::iterator it3;
@@ -142,7 +126,7 @@ void rewrite_pipelines(NBlock *pb){
 						ExpressionList *args = new ExpressionList();
 						args->push_back(new NIdentifier(temp_name));
 						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
-						NVariableDeclaration *map_dec = new NVariableDeclaration(new NType("int32",0),new NIdentifier(new_name), mc);
+						NVariableDeclaration *map_dec = new NVariableDeclaration(typeOf(decl,pipe->src),new NIdentifier(new_name), mc);
 						decl->block->children.insert(it2,map_dec);						
 
 						temp_name = new_name;

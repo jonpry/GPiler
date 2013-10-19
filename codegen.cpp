@@ -38,10 +38,17 @@ static Type *typeOf(const NType* type)
 		ret = Type::getInt32Ty(getGlobalContext());
 	}else if (type->name.compare("int64") == 0) {
 		ret = Type::getInt64Ty(getGlobalContext());
-	}
-	else if (type->name.compare("double") == 0) {
+	}else if (type->name.compare("double") == 0) {
 		ret = Type::getDoubleTy(getGlobalContext());
-	} else ret = Type::getVoidTy(getGlobalContext());
+	}else if (type->name.compare("float") == 0) {
+		ret = Type::getFloatTy(getGlobalContext());
+	}else if (type->name.compare("int16") == 0) {
+		ret = Type::getInt16Ty(getGlobalContext());
+	}else if (type->name.compare("int8") == 0) {
+		ret = Type::getInt8Ty(getGlobalContext());
+	}else if (type->name.compare("void") == 0) {
+		ret = Type::getVoidTy(getGlobalContext());
+	} else cout << "Error unknown type\n";
 
 	if(type->isArray){
 		ret = PointerType::get(ret,1);//1 is global address space
@@ -95,16 +102,13 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 	std::cout << "Creating binary operation " << op << endl;
 	Instruction::BinaryOps instr;
 	switch (op) {
-		case TPLUS: instr = Instruction::Add; goto math;
-		case TMINUS: instr = Instruction::Sub; goto math;
-		case TMUL: instr = Instruction::Mul; goto math;
-		case TDIV: instr = Instruction::SDiv; goto math;
-
+		case TPLUS: instr = Instruction::Add; break;
+		case TMINUS: instr = Instruction::Sub; break;
+		case TMUL: instr = Instruction::Mul; break;
+		case TDIV: instr = Instruction::SDiv; break;
+		default: cout << "Unknown op\n"; return 0;
 		/* TODO comparison */
 	}
-
-	return NULL;
-	math:
 	return BinaryOperator::Create(instr, lhs->codeGen(context),
 		rhs->codeGen(context), "", context.currentBlock());
 }
