@@ -1756,7 +1756,7 @@ yyreduce:
 
 /* Line 1806 of yacc.c  */
 #line 162 "parser.y"
-    { (yyval.expr) = new NIf((yyvsp[(1) - (5)].expr), (yyvsp[(3) - (5)].expr), (yyvsp[(5) - (5)].expr)); }
+    { (yyval.expr) = new NSelect((yyvsp[(1) - (5)].expr), (yyvsp[(3) - (5)].expr), (yyvsp[(5) - (5)].expr)); }
     break;
 
   case 45:

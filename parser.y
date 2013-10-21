@@ -159,7 +159,7 @@ expr :  ident { $<ident>$ = $1; }
   	| expr TMINUS expr { $$ = new NBinaryOperator($1, $2, $3); }
   	| expr TMUL expr { $$ = new NBinaryOperator($1, $2, $3); }
   	| expr TDIV expr { $$ = new NBinaryOperator($1, $2, $3); }
-	| expr TQUEST expr TCOLON expr { $$ = new NIf($1, $3, $5); }
+	| expr TQUEST expr TCOLON expr { $$ = new NSelect($1, $3, $5); }
      	| TLPAREN expr TRPAREN { $$ = $2; }
 	| func_call
 	;

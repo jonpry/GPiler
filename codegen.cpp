@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "codegen.h"
 #include "parser.hpp"
 
+#define MAX(a,b) (a>b?a:b)
+
 using namespace std;
 
 /* Compile the AST into a module */
@@ -182,6 +184,23 @@ int isCmp(int op){
 	}
 }
 
+GType NBinaryOperator::GetType(CodeGenContext& context){
+	GType ltype = lhs->GetType(context);
+	GType rtype = rhs->GetType(context);
+	GType ret;
+	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
+		ret.type = FLOAT_TYPE;
+	}else{
+		//TODO: not sure if we support any other automatic promotions but we can at least check
+		//for argument type match and throw awesome error
+		ret.type = ltype.type;
+	}
+
+	ret.length = MAX(ltype.length,rtype.length);
+
+	return ret;
+}
+
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating binary operation " << op << endl;
@@ -251,10 +270,10 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 	}
 }
 
-Value* NIf::codeGen(CodeGenContext& context)
+Value* NSelect::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating if operation " << endl;
-
+	//TODO: do automatic promotion on yes and no
 	
 	return SelectInst::Create(pred->codeGen(context), yes->codeGen(context), no->codeGen(context), "", context.currentBlock());
 }

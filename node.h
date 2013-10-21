@@ -239,12 +239,14 @@ public:
 		os << *rhs;
 		sTabs--;
 	}
+
+	GType GetType(CodeGenContext& context);
 };
 
-class NIf : public NExpression {
+class NSelect : public NExpression {
 public:
 	NExpression *pred, *yes, *no;
-	NIf(NExpression *pred, NExpression *yes, NExpression *no) : pred(pred), yes(yes), no(no) { 
+	NSelect(NExpression *pred, NExpression *yes, NExpression *no) : pred(pred), yes(yes), no(no) { 
 		children.push_back(pred);
 		children.push_back(yes);
 		children.push_back(no);
