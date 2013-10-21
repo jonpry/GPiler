@@ -34,7 +34,7 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV 
-%token <token> TSEMI TLBRACK TRBRACK TCOLON TDCOLON
+%token <token> TSEMI TLBRACK TRBRACK TCOLON TDCOLON TQUEST
 
 
 /* Define the type of node our nonterminal symbols represent.
@@ -73,9 +73,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 %type <map> map
 
 /* Operator precedence for mathematical operators */
+%left TCOLON TQUEST
 %left TPLUS TMINUS
 %left TCEQ TCNE TCLT TCGT TCLE TCGE
-%left TMUL TDIV
+%left TMUL TDIV 
 
 %start program
 
@@ -158,6 +159,7 @@ expr :  ident { $<ident>$ = $1; }
   	| expr TMINUS expr { $$ = new NBinaryOperator($1, $2, $3); }
   	| expr TMUL expr { $$ = new NBinaryOperator($1, $2, $3); }
   	| expr TDIV expr { $$ = new NBinaryOperator($1, $2, $3); }
+	| expr TQUEST expr TCOLON expr { $$ = new NIf($1, $3, $5); }
      	| TLPAREN expr TRPAREN { $$ = $2; }
 	| func_call
 	;

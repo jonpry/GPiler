@@ -66,7 +66,7 @@ static Type *typeOf(const NType* type)
 	}else if (type->name.compare("int8") == 0) {
 		ret = Type::getInt8Ty(getGlobalContext());
 	}else if (type->name.compare("bool") == 0) {
-		ret = Type::getInt32Ty(getGlobalContext());
+		ret = Type::getInt1Ty(getGlobalContext());
 	}else if (type->name.compare("void") == 0) {
 		ret = Type::getVoidTy(getGlobalContext());
 	} else cout << "Error unknown type\n";
@@ -82,7 +82,9 @@ static Type *typeOf(const NType* type)
 static Type *typeOf(GType type)
 {
 	Type* ret=0;
-	if (type.type == INT_TYPE && type.length==32) {
+	if (type.type == BOOL_TYPE){
+		ret = Type::getInt1Ty(getGlobalContext());
+	}else if (type.type == INT_TYPE && type.length==32) {
 		ret = Type::getInt32Ty(getGlobalContext());
 	}else if (type.type == INT_TYPE && type.length==64) {
 		ret = Type::getInt64Ty(getGlobalContext());
@@ -116,7 +118,7 @@ GType NType::GetType(CodeGenContext& context){
 	}else if (name.compare("int8") == 0) {
 		ret.type = INT_TYPE; ret.length = 8;
 	}else if (name.compare("bool") == 0) {
-		ret.type = INT_TYPE; ret.length = 32;
+		ret.type = BOOL_TYPE; ret.length = 1;
 	}else if (name.compare("void") == 0) {
 		ret.type = VOID_TYPE; ret.length = 0;
 	} else cout << "Error unknown type\n";
@@ -167,10 +169,24 @@ GType NIdentifier::GetType(CodeGenContext& context) {
 	return context.locals()[name]->type;
 }
 
+int isCmp(int op){
+	//TODO: more comparison
+	switch(op){
+		case TCGT: return 1;
+		case TCLT: return 1;
+		case TCEQ: return 1;
+		case TCLE: return 1;
+		case TCGE: return 1;
+		case TCNE: return 1;
+		default: return 0;
+	}
+}
+
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating binary operation " << op << endl;
 	Instruction::BinaryOps instr;
+	CmpInst::Predicate pred;
 
 	Value *lhc, *rhc;
 
@@ -195,9 +211,20 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			case TMINUS: instr = Instruction::FSub; break;
 			case TMUL: instr = Instruction::FMul; break;
 			case TDIV: instr = Instruction::FDiv; break;
+			case TCGT: pred = CmpInst::Predicate::FCMP_OGT; break;
+			case TCLT: pred = CmpInst::Predicate::FCMP_OLT; break;
+			case TCGE: pred = CmpInst::Predicate::FCMP_OGE; break;
+			case TCLE: pred = CmpInst::Predicate::FCMP_OLE; break;
+			case TCEQ: pred = CmpInst::Predicate::FCMP_OEQ; break;
+			case TCNE: pred = CmpInst::Predicate::FCMP_ONE; break;
 			default: cout << "Unknown op\n"; return 0;
 			/* TODO comparison */
 		}
+		if(isCmp(op)){
+			return new FCmpInst(*context.currentBlock(), pred, lhc, rhc, "");
+		}
+		return BinaryOperator::Create(instr, lhc,
+			rhc, "", context.currentBlock());
 
 	}else{
 		switch (op) {
@@ -205,15 +232,31 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			case TMINUS: instr = Instruction::Sub; break;
 			case TMUL: instr = Instruction::Mul; break;
 			case TDIV: instr = Instruction::SDiv; break;
+			case TCGT: pred = CmpInst::Predicate::ICMP_SGT; break;
+			case TCLT: pred = CmpInst::Predicate::ICMP_SLT; break;
+			case TCGE: pred = CmpInst::Predicate::ICMP_SGE; break;
+			case TCLE: pred = CmpInst::Predicate::ICMP_SLE; break;
+			case TCEQ: pred = CmpInst::Predicate::ICMP_EQ; break;
+			case TCNE: pred = CmpInst::Predicate::ICMP_NE; break;
 			default: cout << "Unknown op\n"; return 0;
-			/* TODO comparison */
 		}
 		lhc = lhs->codeGen(context);
 		rhc = rhs->codeGen(context);
-	}
 
-	return BinaryOperator::Create(instr, lhc,
-		rhc, "", context.currentBlock());
+		if(isCmp(op)){
+			return new ICmpInst(*context.currentBlock(), pred, lhc, rhc, "");
+		}
+		return BinaryOperator::Create(instr, lhc,
+			rhc, "", context.currentBlock());
+	}
+}
+
+Value* NIf::codeGen(CodeGenContext& context)
+{
+	std::cout << "Creating if operation " << endl;
+
+	
+	return SelectInst::Create(pred->codeGen(context), yes->codeGen(context), no->codeGen(context), "", context.currentBlock());
 }
 
 Value* NAssignment::codeGen(CodeGenContext& context)

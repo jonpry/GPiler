@@ -54,6 +54,7 @@ extern "C" int yywrap() { }
 "]" return TOKEN(TRBRACK);
 ":" return TOKEN(TCOLON);
 "::" return TOKEN(TDCOLON);
+"?" return TOKEN(TQUEST);
 . printf("Unknown token!\n"); yyterminate();
 
 %%

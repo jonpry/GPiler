@@ -53,7 +53,8 @@ typedef list<Node*> NodeList;
 
 #define INT_TYPE 1
 #define FLOAT_TYPE 2
-#define VOID_TYPE 3
+#define BOOL_TYPE 3
+#define VOID_TYPE 4
 
 struct GType {
 	int type;
@@ -230,11 +231,32 @@ public:
 			case TMINUS: 	os << "-\n"; break;
 			case TMUL:	os << "*\n"; break;
 			case TDIV:	os << "/\n"; break;
+			case TCGT:	os << ">\n"; break;
 			default:	os << "unknown op\n"; break; 
 		}
 		sTabs++;
 		os << *lhs;
 		os << *rhs;
+		sTabs--;
+	}
+};
+
+class NIf : public NExpression {
+public:
+	NExpression *pred, *yes, *no;
+	NIf(NExpression *pred, NExpression *yes, NExpression *no) : pred(pred), yes(yes), no(no) { 
+		children.push_back(pred);
+		children.push_back(yes);
+		children.push_back(no);
+	}
+	virtual llvm::Value* codeGen(CodeGenContext& context);
+
+	void print(ostream& os) { 
+		os << "If:\n";
+		sTabs++;
+		os << *pred;
+		os << *yes;
+		os << *no;
 		sTabs--;
 	}
 };
