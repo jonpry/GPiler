@@ -84,7 +84,7 @@ NFunctionDeclaration *extract_func(NMap* map,NType* type) {
 
 	NAssignment *assignment = new NAssignment(*(map->vars->begin()), map->expr);
 	assignment->isReturn = 1;
-	func_block->children.push_back(assignment);
+	func_block->add_child(assignment);
 	//func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
 
 	std::string anon_name = create_anon_name();
@@ -106,7 +106,7 @@ void rewrite_maps(NBlock *pb) {
 				if (pipeline) {
 					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
 						NFunctionDeclaration *anon_func = extract_func(*it3, typeOf(func,pipeline->src));
-						pb->children.insert(pb->children.begin(), anon_func);
+						pb->add_child(pb->children.begin(), anon_func);
 					}
 				}
 			}
@@ -114,6 +114,7 @@ void rewrite_maps(NBlock *pb) {
 	}
 }
 
+//Array arguments are converted to pointers
 void rewrite_arrays(NBlock* programBlock){
 	NodeList::iterator it;
 	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){

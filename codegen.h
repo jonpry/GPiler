@@ -44,17 +44,18 @@ using namespace llvm;
 
 class NBlock;
 
-class GValue{
-public:
-	Value* value;
-	GType type;
-	GValue(Value* value, GType type) : value(value), type(type) {}
-};
-
 class CodeGenBlock {
 public:
+    CodeGenBlock(CodeGenBlock *parent){
+	if(parent){
+		locals = parent->locals;
+		localTypes = parent->localTypes;
+	}
+    }
+
     BasicBlock *block;
-    std::map<std::string, GValue*> locals;
+    std::map<std::string, Value*> locals;
+    std::map<std::string, GType> localTypes;
 };
 
 class CodeGenContext {
@@ -67,8 +68,9 @@ public:
     
     void generateCode(NBlock& root);
     GenericValue runCode();
-    std::map<std::string, GValue*>& locals() { return blocks.top()->locals; }
+    std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
+    std::map<std::string, GType>& localTypes() { return blocks.top()->localTypes; }
     BasicBlock *currentBlock() { return blocks.top()->block; }
-    void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock()); blocks.top()->block = block; }
+    void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock(blocks.top())); blocks.top()->block = block; }
     void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }
 };

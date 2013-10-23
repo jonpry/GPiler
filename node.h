@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <iostream>
 #include <vector>
 #include <list>
+#include <map>
 #include <llvm/IR/Value.h>
 
 class Node;
@@ -69,6 +70,7 @@ public:
 	virtual llvm::Value* codeGen(CodeGenContext& context) { }
 
 	NodeList children;
+	Node *parent;
 
 	virtual void print(ostream& os) { os << "Unknown Node\n"; }
 	friend ostream& operator<<(ostream& os, Node &node)
@@ -79,13 +81,23 @@ public:
     		return os;
 	}
 
+	void add_child(Node *c){
+		children.push_back(c);
+		c->parent = this;
+	}
+
+	void add_child(NodeList::iterator at, Node *c){
+		children.insert(at,c);
+		c->parent = this;
+	}
+
 	static int sTabs;  
 };
 
 class NExpression : public Node {
 public: 
 	void print(ostream& os) { os << "Unknown Expression\n"; }
-	virtual GType GetType(CodeGenContext& context) { cout << "Unknown type\n"; }
+	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type\n"; }
 };
 
 class NStatement : public Node {
@@ -99,7 +111,7 @@ public:
 	NInteger(long long value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Integer: " << value << "\n"; }
-	virtual GType GetType(CodeGenContext& context) { return GType(INT_TYPE,32);}
+	GType GetType(map<std::string, GType> &locals) { return GType(INT_TYPE,32);}
 };
 
 class NDouble : public NExpression {
@@ -108,7 +120,7 @@ public:
 	NDouble(double value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Double: " << value << "\n"; }
-	virtual GType GetType(CodeGenContext& context) { return GType(FLOAT_TYPE,64);}
+	GType GetType(map<std::string, GType> &locals) { return GType(FLOAT_TYPE,64);}
 };
 
 class NIdentifier : public NExpression {
@@ -117,7 +129,7 @@ public:
 	NIdentifier(const std::string& name) : name(name) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Identifier: " << name << "\n"; }
-	GType GetType(CodeGenContext& context);
+	GType GetType(map<std::string, GType> &locals);
 };
 
 class NMap : public NExpression {
@@ -128,10 +140,10 @@ public:
 	string anon_name;
 
 	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr) { 
-		children.push_back(name);
+		add_child(name);
 		for(IdList::iterator it = vars->begin(); it!=vars->end(); it++)
-			children.push_back(*it);
-		children.push_back(expr);
+			add_child(*it);
+		add_child(expr);
 	}
 
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -154,7 +166,7 @@ public:
 	NType(const std::string& name, int isArray) : NIdentifier(name), isArray(isArray) { }	
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Type: " << name << " " << isArray << "\n"; }
-	GType GetType(CodeGenContext& context);
+	GType GetType(map<std::string, GType> &locals);
 };
 
 class NMethodCall : public NExpression {
@@ -162,15 +174,15 @@ public:
 	NIdentifier* id;
 	ExpressionList* arguments;
 	NMethodCall(NIdentifier *id, ExpressionList* arguments) : id(id), arguments(arguments) { 
-		children.push_back(id);
+		add_child(id);
 		if(arguments){
 			for(ExpressionList::iterator it = arguments->begin(); it != arguments->end(); it++){
-				children.push_back(*it);
+				add_child(*it);
 			}
 		}
 	}
 	NMethodCall(NIdentifier *id) : id(id) {
-		children.push_back(id);
+		add_child(id);
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
@@ -190,11 +202,11 @@ public:
 	NIdentifier *dest, *src;
 	MapList *chain;
 	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : src(src), chain(chain), dest(dest) {
-		children.push_back(dest);
-		children.push_back(src);
+		add_child(dest);
+		add_child(src);
 		if(chain){
 			for(MapList::iterator it = chain->begin(); it!=chain->end(); it++){
-				children.push_back(*it);
+				add_child(*it);
 			}
 		}
  	}
@@ -219,8 +231,8 @@ public:
 	int op;
 	NExpression *lhs, *rhs;
 	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : lhs(lhs), rhs(rhs), op(op) { 
-		children.push_back(lhs);
-		children.push_back(rhs);
+		add_child(lhs);
+		add_child(rhs);
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
@@ -240,16 +252,16 @@ public:
 		sTabs--;
 	}
 
-	GType GetType(CodeGenContext& context);
+	GType GetType(map<std::string, GType> &locals);
 };
 
 class NSelect : public NExpression {
 public:
 	NExpression *pred, *yes, *no;
 	NSelect(NExpression *pred, NExpression *yes, NExpression *no) : pred(pred), yes(yes), no(no) { 
-		children.push_back(pred);
-		children.push_back(yes);
-		children.push_back(no);
+		add_child(pred);
+		add_child(yes);
+		add_child(no);
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
@@ -267,8 +279,8 @@ class NArrayRef : public NExpression {
 public:
 	NIdentifier *array, *index;
 	NArrayRef(NIdentifier *array, NIdentifier *index) : array(array), index(index) { 
-		children.push_back(array);
-		children.push_back(index);
+		add_child(array);
+		add_child(index);
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	llvm::Value* store(CodeGenContext& context, llvm::Value* rhs);
@@ -294,10 +306,10 @@ public:
 
 	void init(){
 		if(lhs)
-			children.push_back(lhs);
-		children.push_back(rhs);
+			add_child(lhs);
+		add_child(rhs);
 		if(array)
-			children.push_back(array);
+			add_child(array);
 	}
 	void print(ostream& os) 
 	{ 
@@ -353,13 +365,13 @@ public:
 	NBlock *block;
 	NFunctionDeclaration(NType* type, NIdentifier* id, VariableList* arguments, NBlock *block) :
 			type(type), id(id), arguments(arguments), block(block) { 
-		children.push_back(type);
-		children.push_back(id);
+		add_child(type);
+		add_child(id);
 		if(arguments){
 			for(VariableList::iterator it = arguments->begin(); it!= arguments->end(); it++)
-				children.push_back(*it);
+				add_child(*it);
 		}
-		children.push_back(block);
+		add_child(block);
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
@@ -380,7 +392,7 @@ public:
 
 	void InsertArgument(VariableList::iterator at, NVariableDeclaration *var){
 		arguments->insert(at,var);
-		children.push_back(var);
+		add_child(var);
 	}
 };
 

@@ -105,7 +105,7 @@ static Type *typeOf(GType type)
 	return ret;
 }
 
-GType NType::GetType(CodeGenContext& context){
+GType NType::GetType(map<std::string, GType> &locals){
 	GType ret;
 	if (name.compare("int") == 0 || name.compare("int32") == 0) {
 		ret.type = INT_TYPE; ret.length = 32;
@@ -148,7 +148,7 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << name << endl;
 		return NULL;
 	}
-	return new LoadInst(context.locals()[name]->value, "", false, context.currentBlock());
+	return new LoadInst(context.locals()[name], "", false, context.currentBlock());
 }
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
@@ -167,8 +167,8 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 	return call;
 }
 
-GType NIdentifier::GetType(CodeGenContext& context) { 
-	return context.locals()[name]->type;
+GType NIdentifier::GetType(map<std::string, GType> &locals) { 
+	return locals[name];
 }
 
 int isCmp(int op){
@@ -184,9 +184,9 @@ int isCmp(int op){
 	}
 }
 
-GType NBinaryOperator::GetType(CodeGenContext& context){
-	GType ltype = lhs->GetType(context);
-	GType rtype = rhs->GetType(context);
+GType NBinaryOperator::GetType(map<std::string, GType> &locals){
+	GType ltype = lhs->GetType(locals);
+	GType rtype = rhs->GetType(locals);
 	GType ret;
 	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
 		ret.type = FLOAT_TYPE;
@@ -209,8 +209,8 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 	Value *lhc, *rhc;
 
-	GType ltype = lhs->GetType(context);
-	GType rtype = rhs->GetType(context);
+	GType ltype = lhs->GetType(context.localTypes());
+	GType rtype = rhs->GetType(context.localTypes());
 
 	//TODO: argument promotion
 	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
@@ -290,7 +290,7 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 	}
 	if(isReturn)
 		return ReturnInst::Create(getGlobalContext(), rhs->codeGen(context), context.currentBlock());
-	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name]->value, false, context.currentBlock());
+	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name], false, context.currentBlock());
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -308,7 +308,8 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating variable declaration " << type->name << " " << id->name << endl;
 	AllocaInst *alloc = new AllocaInst(typeOf(type), id->name.c_str(), context.currentBlock());
-	context.locals()[id->name] = new GValue(alloc,type->GetType(context));
+	context.locals()[id->name] = alloc;
+	context.localTypes()[id->name] = type->GetType(context.localTypes());
 	//cout << context.locals()[id->name]->type.length;
 	if (assignmentExpr != NULL) {
 		NAssignment assn(id, assignmentExpr);
@@ -326,8 +327,8 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 		std::cout << (*it).first << " " << (*it).second << "\n";
 	}*/
 
-	Value* idx = new LoadInst(context.locals()[index->name]->value, "", false, context.currentBlock());
-	Value* ptr = new LoadInst(context.locals()[array->name]->value, "", false, context.currentBlock());
+	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
 	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
@@ -337,8 +338,8 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
 	std::cout << "Creating array store " << array->name << " " << index->name << endl;
 
-	Value* idx = new LoadInst(context.locals()[index->name]->value, "", false, context.currentBlock());
-	Value* ptr = new LoadInst(context.locals()[array->name]->value, "", false, context.currentBlock());
+	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
 	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
@@ -391,7 +392,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
     	//		context.locals()[(*it)->id.name] = AI;
 
 		(*it)->codeGen(context);
-		new StoreInst((Value*)AI, context.locals()[ (*it)->id->name]->value, false, context.currentBlock());
+		new StoreInst((Value*)AI, context.locals()[ (*it)->id->name], false, context.currentBlock());
   	}
 
 	block->codeGen(context);
