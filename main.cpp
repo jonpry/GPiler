@@ -74,6 +74,19 @@ static NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var){
 	return 0;
 }
 
+static NType* typeOf(string name, NBlock* pb){
+	NodeList::iterator it;
+	for(it = pb->children.begin(); it!=pb->children.end(); it++){
+		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(func) {
+			if(name.compare(func->id->name)==0){
+				return func->type;
+			}
+		}
+	}
+	return 0;
+}
+
 NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,NType* type) {
 	VariableList *var_list = new VariableList;
 	// turn ids into vars
@@ -97,7 +110,7 @@ NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,NType* type) {
 
 	///////////////////////////
 	GType foo = GetType(pb,map->expr);
-	printType(foo);
+	anon_func->SetType(foo.toNode());
 	//////////////////////////
 
 	return anon_func;
@@ -110,8 +123,10 @@ void rewrite_maps(NBlock *pb) {
 			for (NodeList::iterator it2 = func->block->children.begin(); it2 != func->block->children.end(); it2++) {
 				NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it2);
 				if (pipeline) {
+					NType* type = typeOf(func,pipeline->src);
 					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
-						NFunctionDeclaration *anon_func = extract_func(pb,*it3, typeOf(func,pipeline->src));
+						NFunctionDeclaration *anon_func = extract_func(pb,*it3, type);
+						type = anon_func->type;
 						pb->add_child(pb->children.begin(), anon_func);
 					}
 				}
@@ -143,7 +158,8 @@ void rewrite_pipelines(NBlock *pb){
 					string temp_name = create_temp_name();
 					//Load it
 					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
-					NVariableDeclaration *dec = new NVariableDeclaration(typeOf(decl,pipe->src), new NIdentifier(temp_name),iptr);
+					NType* type = typeOf(decl,pipe->src);
+					NVariableDeclaration *dec = new NVariableDeclaration(type, new NIdentifier(temp_name),iptr);
 					decl->block->children.insert(it2,dec);
 
 					MapList::iterator it3;
@@ -154,7 +170,8 @@ void rewrite_pipelines(NBlock *pb){
 						ExpressionList *args = new ExpressionList();
 						args->push_back(new NIdentifier(temp_name));
 						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
-						NVariableDeclaration *map_dec = new NVariableDeclaration(typeOf(decl,pipe->src),new NIdentifier(new_name), mc);
+						type = typeOf(map->anon_name,pb);
+						NVariableDeclaration *map_dec = new NVariableDeclaration(type,new NIdentifier(new_name), mc);
 						decl->block->children.insert(it2,map_dec);						
 
 						temp_name = new_name;

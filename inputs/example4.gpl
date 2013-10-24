@@ -1,4 +1,4 @@
 
-[int32] mapit([int32] input){
-	input :: map(x : x*x) :: map(x : x + 1) :: map(x : x > 0 ? x: 0-x) > return;
+[double] mapit([int32] input){
+	input :: map(x : x*x) :: map(x : x + 1.0) :: map(x : x > 0 ? x: 0-x) > return;
 }

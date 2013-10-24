@@ -57,6 +57,8 @@ GType GetType(NBlock *pb, NExpression *exp){
 		}
 	}
 
+	//TODO: this may not work right because it doesn't push context on basic blocks.
+
 	GType exptype;
 	int found=0;
 	func->block->GetType(locals,&exptype,&found,exp);
@@ -64,6 +66,36 @@ GType GetType(NBlock *pb, NExpression *exp){
 	return exptype;			
 }
 
-void printType(GType type){
-	cout << type.type << ", " << type.length << "\n";
+void GType::print(){
+	cout << type << ", " << length << "\n";
+}
+
+NType* GType::toNode(){
+	string stype;
+	if(type==FLOAT_TYPE){
+		if(length==64)
+			stype = "double";
+		else
+			stype = "float";
+	}
+
+	if(type==INT_TYPE){
+		switch(length){
+			case 64: stype = "int64"; break;
+			case 32: stype = "int32"; break;
+			case 16: stype = "int16"; break;
+			case 8: stype = "int8"; break;
+
+		}
+	}
+
+	if(type==VOID_TYPE){
+		stype = "void";
+	}
+
+	if(type==BOOL_TYPE){
+		stype = "bool";
+	}
+
+	return new NType(stype,0);
 }

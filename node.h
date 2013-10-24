@@ -62,6 +62,9 @@ struct GType {
 	int length;
 	GType(int type, int length) : type(type), length(length) {}
 	GType(){}
+
+	void print();
+	NType* toNode();
 }; 
 
 class Node {
@@ -460,6 +463,7 @@ public:
 	void SetType(NType* new_type){
 		children.remove(type);
 		type = new_type;
+		add_child(type);
 	}
 
 	void InsertArgument(VariableList::iterator at, NVariableDeclaration *var){
