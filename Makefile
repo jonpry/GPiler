@@ -6,7 +6,8 @@ OBJS = 	parser.o \
 	codegen.o \
 	corefn.o \
 	compile.o \
-	types.o
+	types.o \
+	runtime.o
 
 CPPFLAGS = `llvm-config-3.4 --cppflags` -std=c++11
 LDFLAGS = `llvm-config-3.4 --ldflags`
@@ -23,7 +24,7 @@ parser.hpp: parser.cpp
 tokens.cpp: tokens.l parser.hpp
 	flex -o $@ $^
 
-%.o: %.cpp node.h
+%.o: %.cpp node.h codegen.h runtime.h
 	g++ -c $(CPPFLAGS) -o $@ $<
 
 

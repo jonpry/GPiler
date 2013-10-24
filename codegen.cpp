@@ -21,8 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "codegen.h"
 #include "parser.hpp"
 
-#define MAX(a,b) (a>b?a:b)
-
 using namespace std;
 
 /* Compile the AST into a module */
@@ -105,28 +103,6 @@ static Type *typeOf(GType type)
 	return ret;
 }
 
-GType NType::GetType(map<std::string, GType> &locals){
-	GType ret;
-	if (name.compare("int") == 0 || name.compare("int32") == 0) {
-		ret.type = INT_TYPE; ret.length = 32;
-	}else if (name.compare("int64") == 0) {
-		ret.type = INT_TYPE; ret.length = 64;
-	}else if (name.compare("double") == 0) {
-		ret.type = FLOAT_TYPE; ret.length = 64;
-	}else if (name.compare("float") == 0) {
-		ret.type = FLOAT_TYPE; ret.length = 32;
-	}else if (name.compare("int16") == 0) {
-		ret.type = INT_TYPE; ret.length = 32;
-	}else if (name.compare("int8") == 0) {
-		ret.type = INT_TYPE; ret.length = 8;
-	}else if (name.compare("bool") == 0) {
-		ret.type = BOOL_TYPE; ret.length = 1;
-	}else if (name.compare("void") == 0) {
-		ret.type = VOID_TYPE; ret.length = 0;
-	} else cout << "Error unknown type\n";
-	return ret;
-}
-
 /* -- Code Generation -- */
 
 Value* NInteger::codeGen(CodeGenContext& context)
@@ -167,10 +143,6 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 	return call;
 }
 
-GType NIdentifier::GetType(map<std::string, GType> &locals) { 
-	return locals[name];
-}
-
 int isCmp(int op){
 	//TODO: more comparison
 	switch(op){
@@ -182,29 +154,6 @@ int isCmp(int op){
 		case TCNE: return 1;
 		default: return 0;
 	}
-}
-
-GType promoteType(GType ltype, GType rtype){
-	GType ret;
-	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
-		ret.type = FLOAT_TYPE;
-	}else{
-		//TODO: not sure if we support any other automatic promotions but we can at least check
-		//for argument type match and throw awesome error
-		ret.type = ltype.type;
-	}
-
-	ret.length = MAX(ltype.length,rtype.length);
-
-	return ret;
-}
-
-GType NBinaryOperator::GetType(map<std::string, GType> &locals){
-	return promoteType(lhs->GetType(locals),rhs->GetType(locals));
-}
-
-GType NSelect::GetType(map<std::string, GType> &locals){
-	return promoteType(yes->GetType(locals),no->GetType(locals));
 }
 
 Value* NBinaryOperator::codeGen(CodeGenContext& context)

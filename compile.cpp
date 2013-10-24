@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/IR/DataLayout.h"
 
 #define FOR_NV
@@ -139,7 +140,10 @@ void compile(Module &mod){
 		TargetMachine::CodeGenFileType FileType = TargetMachine::CGFT_AssemblyFile;
 
     		// Ask the target to add backend passes as necessary.
-    		if (Target.addPassesToEmitFile(PM, fouts(), FileType, false)) {
+		std::string error;
+ 		tool_output_file *Out = new tool_output_file("out.ptx", error);
+		formatted_raw_ostream FOS(Out->os());
+    		if (Target.addPassesToEmitFile(PM, FOS, FileType, false)) {
       				cout << ": target does not support generation of this file type!\n";
     		}
 

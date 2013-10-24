@@ -23,19 +23,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <cstdio>
 #include "codegen.h"
 #include "node.h"
+#include "runtime.h"
 
 using namespace std;
 
 int Node::sTabs = 0;
 
 extern int yyparse();
+extern FILE* yyin;
 extern NBlock* programBlock;
 
 void createCoreFunctions(CodeGenContext& context);
 void compile(Module &mod);
 
 
-void rewrite_arrays(NFunctionDeclaration *decl){
+void rewrite_arrays(NFunctionDeclaration *decl, Runtime *runtime){
 	if(decl->type->isArray){
 		NType *old_type = decl->type;
 		decl->SetType(new NType("void",0));
@@ -43,6 +45,7 @@ void rewrite_arrays(NFunctionDeclaration *decl){
 		NVariableDeclaration *var = new NVariableDeclaration(old_type,new NIdentifier("return"),0);
 		decl->InsertArgument(decl->arguments->begin(),var);
 	}
+	runtime->AddFunction(decl);
 
 	NVariableDeclaration *idxvar = new NVariableDeclaration(new NType("int32",0),new NIdentifier("idx"),0);
 	decl->InsertArgument(decl->arguments->begin(),idxvar);
@@ -136,12 +139,12 @@ void rewrite_maps(NBlock *pb) {
 }
 
 //Array arguments are converted to pointers
-void rewrite_arrays(NBlock* programBlock){
+void rewrite_arrays(NBlock* programBlock, Runtime *runtime){
 	NodeList::iterator it;
 	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl){
-			rewrite_arrays(decl);
+			rewrite_arrays(decl,runtime);
 		}
 	}
 }
@@ -195,13 +198,28 @@ void rewrite_pipelines(NBlock *pb){
 
 int main(int argc, char **argv)
 {
+	if(argc!=2){
+		cout << "Usage: parser inputfile\n";
+		return 0;
+	}
+
+	FILE *infile = fopen(argv[1], "r");
+	if (!infile) {
+		cout << "Can't open: " << argv[1] << endl;
+		return 0;
+	}
+	// set lex to read from it instead of defaulting to STDIN:
+	yyin = infile;
+
 	yyparse();
 
 	cout << "Raw:\n";
 
+	Runtime *runtime = new Runtime();
+
 	std::cout << *programBlock << endl;
 
-	rewrite_arrays(programBlock);
+	rewrite_arrays(programBlock,runtime);
 
 	cout << "Pass1:\n";
 
@@ -221,6 +239,8 @@ int main(int argc, char **argv)
 	context.generateCode(*programBlock);
 	compile(*context.module);
 #endif
+	runtime->print();
+
 	return 0;
 }
 

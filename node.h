@@ -38,6 +38,8 @@ class NMap;
 
 #include "parser.hpp"
 
+#define MAX(a,b) (a>b?a:b)
+
 using namespace std;
 
 class CodeGenContext;
@@ -66,6 +68,9 @@ struct GType {
 	void print();
 	NType* toNode();
 }; 
+
+GType promoteType(GType ltype, GType rtype);
+int isCmp(int op);
 
 class Node {
 public:
