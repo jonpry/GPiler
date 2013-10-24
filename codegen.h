@@ -42,35 +42,46 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 using namespace llvm;
 
+GType GetType(NBlock *pb, NExpression *exp);
+void printType(GType type);
+
 class NBlock;
 
 class CodeGenBlock {
 public:
-    CodeGenBlock(CodeGenBlock *parent){
-	if(parent){
-		locals = parent->locals;
-		localTypes = parent->localTypes;
-	}
-    }
+	CodeGenBlock(CodeGenBlock *parent){
+		if(parent){
+			locals = parent->locals;
+			localTypes = parent->localTypes;
+		}
+    	}
 
-    BasicBlock *block;
-    std::map<std::string, Value*> locals;
-    std::map<std::string, GType> localTypes;
+    	BasicBlock *block;
+    	std::map<std::string, Value*> locals;
+    	std::map<std::string, GType> localTypes;
 };
 
 class CodeGenContext {
-    std::stack<CodeGenBlock *> blocks;
+    	std::stack<CodeGenBlock *> blocks;
 
 public:
-    Function *mainFunction;
-    Module *module;
-    CodeGenContext() { module = new Module("main", getGlobalContext()); }
+    	Function *mainFunction;
+    	Module *module;
+    	CodeGenContext() { module = new Module("main", getGlobalContext()); }
+	~CodeGenContext() { 
+		while(!blocks.empty()){
+			CodeGenBlock *top = blocks.top();
+			delete top;
+			blocks.pop();
+			top = blocks.top();
+		}
+	}
     
-    void generateCode(NBlock& root);
-    GenericValue runCode();
-    std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
-    std::map<std::string, GType>& localTypes() { return blocks.top()->localTypes; }
-    BasicBlock *currentBlock() { return blocks.top()->block; }
-    void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock(blocks.top())); blocks.top()->block = block; }
-    void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }
+    	void generateCode(NBlock& root);
+    	GenericValue runCode();
+    	std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
+    	std::map<std::string, GType>& localTypes() { return blocks.top()->localTypes; }
+    	BasicBlock *currentBlock() { return blocks.top()->block; }
+    	void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock(blocks.empty()?0:blocks.top())); blocks.top()->block = block; }
+    	void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }
 };

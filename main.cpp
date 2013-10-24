@@ -74,7 +74,7 @@ static NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var){
 	return 0;
 }
 
-NFunctionDeclaration *extract_func(NMap* map,NType* type) {
+NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,NType* type) {
 	VariableList *var_list = new VariableList;
 	// turn ids into vars
 	for (IdList::iterator it = map->vars->begin(); it != map->vars->end(); it++) {
@@ -94,6 +94,12 @@ NFunctionDeclaration *extract_func(NMap* map,NType* type) {
 			func_block
 			);
 	map->anon_name = anon_name;
+
+	///////////////////////////
+	GType foo = GetType(pb,map->expr);
+	printType(foo);
+	//////////////////////////
+
 	return anon_func;
 }
 
@@ -105,7 +111,7 @@ void rewrite_maps(NBlock *pb) {
 				NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it2);
 				if (pipeline) {
 					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
-						NFunctionDeclaration *anon_func = extract_func(*it3, typeOf(func,pipeline->src));
+						NFunctionDeclaration *anon_func = extract_func(pb,*it3, typeOf(func,pipeline->src));
 						pb->add_child(pb->children.begin(), anon_func);
 					}
 				}

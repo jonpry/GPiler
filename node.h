@@ -98,6 +98,7 @@ class NExpression : public Node {
 public: 
 	void print(ostream& os) { os << "Unknown Expression\n"; }
 	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type\n"; }
+	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type\n"; }
 };
 
 class NStatement : public Node {
@@ -236,6 +237,24 @@ public:
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
+	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+		if(exp==this){
+			*ptype = GetType(locals);
+			*found=1;
+			return *ptype;
+		}
+
+		GType ret = rhs->GetType(locals,ptype,found,exp);
+		if(*found)
+			return ret;
+
+		ret = lhs->GetType(locals,ptype,found,exp);
+		if(*found)
+			return ret;
+
+		return GetType(locals);	
+	}
+
 	void print(ostream& os) { 
 		os << "Binary Op: ";
 		switch(op){
@@ -244,6 +263,11 @@ public:
 			case TMUL:	os << "*\n"; break;
 			case TDIV:	os << "/\n"; break;
 			case TCGT:	os << ">\n"; break;
+			case TCLT:	os << "<\n"; break;
+			case TCGE:	os << ">=\n"; break;
+			case TCLE:	os << "<=\n"; break;
+			case TCNE:	os << "!=\n"; break;	
+			case TCEQ:	os << "==\n"; break;
 			default:	os << "unknown op\n"; break; 
 		}
 		sTabs++;
@@ -265,8 +289,33 @@ public:
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
+
+	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+		if(exp==this){
+			*ptype = GetType(locals);
+			*found=1;
+			return *ptype;
+		}
+
+		GType ret = yes->GetType(locals,ptype,found,exp);
+		if(*found)
+			return ret;
+
+		ret = no->GetType(locals,ptype,found,exp);
+		if(*found)
+			return ret;
+
+		ret = pred->GetType(locals,ptype,found,exp);
+		if(*found)
+			return ret;
+
+		return GetType(locals);	
+	}
+
+	GType GetType(map<std::string, GType> &locals);
+
 	void print(ostream& os) { 
-		os << "If:\n";
+		os << "Select:\n";
 		sTabs++;
 		os << *pred;
 		os << *yes;
@@ -304,6 +353,21 @@ public:
 	NAssignment(NArrayRef *array, NExpression *rhs) : array(array), lhs(0), rhs(rhs), isReturn(0) {init(); }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
+	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+		if(exp==this){
+			*ptype = rhs->GetType(locals);
+			*found=1;
+			return *ptype;
+		}
+
+		GType ret = rhs->GetType(locals,ptype,found,exp);
+		if(*found)
+			return ret;
+
+		locals[lhs->name] = ret;
+		return ret;	
+	}
+
 	void init(){
 		if(lhs)
 			add_child(lhs);
@@ -335,6 +399,14 @@ public:
 			os << **it;
 		}
 		sTabs--;
+	}
+	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+		NodeList::iterator it;
+		for(it = children.begin(); it!= children.end(); it++){
+			GType ret = ((NExpression*)(*it))->GetType(locals,ptype,found,exp);
+			if(*found)
+				return ret;
+		}
 	}
 };
 

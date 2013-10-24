@@ -184,9 +184,7 @@ int isCmp(int op){
 	}
 }
 
-GType NBinaryOperator::GetType(map<std::string, GType> &locals){
-	GType ltype = lhs->GetType(locals);
-	GType rtype = rhs->GetType(locals);
+GType promoteType(GType ltype, GType rtype){
 	GType ret;
 	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
 		ret.type = FLOAT_TYPE;
@@ -199,6 +197,14 @@ GType NBinaryOperator::GetType(map<std::string, GType> &locals){
 	ret.length = MAX(ltype.length,rtype.length);
 
 	return ret;
+}
+
+GType NBinaryOperator::GetType(map<std::string, GType> &locals){
+	return promoteType(lhs->GetType(locals),rhs->GetType(locals));
+}
+
+GType NSelect::GetType(map<std::string, GType> &locals){
+	return promoteType(yes->GetType(locals),no->GetType(locals));
 }
 
 Value* NBinaryOperator::codeGen(CodeGenContext& context)

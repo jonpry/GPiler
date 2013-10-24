@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/IR/DataLayout.h"
 
-//#define FOR_NV
+#define FOR_NV
 
 #ifdef FOR_NV
 	#define TRIPLE "nvptx64-unknown-unknown"

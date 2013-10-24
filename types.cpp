@@ -25,27 +25,45 @@ using namespace std;
 
 
 GType GetType(NBlock *pb, NExpression *exp){
-	map<std::string, GType> funcs;
+	map<std::string, GType> locals;
 
 	Node *parent = exp->parent;
 	while(1){
-		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*>(parent);
-		if(func)
+		NFunctionDeclaration *funcp = dynamic_cast<NFunctionDeclaration*>(parent);
+		if(funcp)
 			break;
 		parent = parent->parent;
 	}
+	NFunctionDeclaration *func = (NFunctionDeclaration *)parent;
 
 	//Find return type for all functions
-	NodeList::iterator it;
-	for(it=pb->children.begin(); it!= pb->children.end(); it++){
-		if(*it != parent){
-			NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*>(parent);
-			if(!func)
-				continue;
-			funcs[func->id->name] = func->type->GetType(funcs); 
+	{
+		NodeList::iterator it;
+		for(it=pb->children.begin(); it!= pb->children.end(); it++){
+			if(*it != parent){
+				NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*>(parent);
+				if(!func)
+					continue;
+				locals[func->id->name] = func->type->GetType(locals); 
+			}
 		}
 	}
 
-	map<std::string, GType> locals;
-			
+	//Add the functions arguments
+	{
+		VariableList::iterator it;
+		for(it = func->arguments->begin(); it != func->arguments->end(); it++){
+			locals[(*it)->id->name] = (*it)->type->GetType(locals);
+		}
+	}
+
+	GType exptype;
+	int found=0;
+	func->block->GetType(locals,&exptype,&found,exp);
+
+	return exptype;			
+}
+
+void printType(GType type){
+	cout << type.type << ", " << type.length << "\n";
 }
