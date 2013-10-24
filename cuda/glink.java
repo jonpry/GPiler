@@ -62,7 +62,7 @@ public class glink {
 		running=false;
 		for(String line : runtime){
 			if(running){
-				if(line.contains("_Z8mapitfooiPiS_,")){
+				if(line.contains("_Z8mapitfooiPdPi,")){
 					System.out.println("\tmapit,");
 				}else 
 					System.out.println(line);
