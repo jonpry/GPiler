@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <vector>
 #include <list>
 #include <map>
+#include <typeinfo>
 #include <llvm/IR/Value.h>
 
 class Node;
@@ -80,7 +81,7 @@ public:
 	NodeList children;
 	Node *parent;
 
-	virtual void print(ostream& os) { os << "Unknown Node\n"; }
+	virtual void print(ostream& os) { os << "Unknown Node: " << typeid(*this).name() << "\n"; }
 	friend ostream& operator<<(ostream& os, Node &node)
 	{
 		for(int i=0; i < sTabs; i++)
@@ -104,14 +105,14 @@ public:
 
 class NExpression : public Node {
 public: 
-	void print(ostream& os) { os << "Unknown Expression\n"; }
-	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type\n"; }
-	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type\n"; }
+	void print(ostream& os) { os << "Unknown Expression: " <<  typeid(*this).name() << "\n"; }
+	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type: " <<  typeid(*this).name() << "\n"; }
+	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type2: " <<  typeid(*this).name() << "\n"; }
 };
 
 class NStatement : public Node {
 public: 
-	void print(ostream& os) { os << "Unknown Statement\n"; }
+	void print(ostream& os) { os << "Unknown Statement: " <<  typeid(*this).name() << "\n"; }
 };
 
 class NInteger : public NExpression {
@@ -276,7 +277,7 @@ public:
 			case TCLE:	os << "<=\n"; break;
 			case TCNE:	os << "!=\n"; break;	
 			case TCEQ:	os << "==\n"; break;
-			default:	os << "unknown op\n"; break; 
+			default:	os << "unknown op: " << op << "\n"; break; 
 		}
 		sTabs++;
 		os << *lhs;
@@ -430,23 +431,35 @@ public:
 		os << "Variable decl:\n"; 
 		sTabs++;
 		os << *type;
-		os << *id;
+		if(id)
+			os << *id;
 		if(assignmentExpr)
 			os << *assignmentExpr;
 		sTabs--;
 	}
+
+	void SetType(NType* new_type){
+		children.remove(type);
+		add_child(new_type);
+		type = new_type;
+	}
+
+	GType GetType(map<std::string, GType> &locals){ return type->GetType(locals); }
 };
 
 class NFunctionDeclaration : public NStatement {
 public:
-	NType *type;
 	NIdentifier *id;
-	VariableList *arguments;
+	VariableList *returns, *arguments;
 	NBlock *block;
-	NFunctionDeclaration(NType* type, NIdentifier* id, VariableList* arguments, NBlock *block) :
-			type(type), id(id), arguments(arguments), block(block) { 
-		add_child(type);
+	int isGenerated;
+	NFunctionDeclaration(VariableList* returns, NIdentifier* id, VariableList* arguments, NBlock *block) :
+			returns(returns), id(id), arguments(arguments), block(block), isGenerated(0) { 
 		add_child(id);
+		if(returns){
+			for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++)
+				add_child(*it);
+		}
 		if(arguments){
 			for(VariableList::iterator it = arguments->begin(); it!= arguments->end(); it++)
 				add_child(*it);
@@ -457,23 +470,40 @@ public:
 	void print(ostream& os) { 
 		os << "Function decl:\n"; 
 		sTabs++;
-		os << *type << *id;
+		os << *id;
 		VariableList::iterator it;
+		for(it = returns->begin(); it!=returns->end(); it++)
+			os << **it;
 		for(it = arguments->begin(); it!=arguments->end(); it++)
 			os << **it;
 		os << *block;	
  		sTabs--;
 	}
 
-	void SetType(NType* new_type){
-		children.remove(type);
-		type = new_type;
-		add_child(type);
+	void SetType(VariableList &new_types){
+		VariableList::iterator it;
+		for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++)
+			children.remove(*it);
+		returns->clear();
+		for(VariableList::iterator it = new_types.begin(); it!= new_types.end(); it++){
+			returns->push_back(*it);
+			add_child(*it);
+		}
 	}
 
 	void InsertArgument(VariableList::iterator at, NVariableDeclaration *var){
 		arguments->insert(at,var);
 		add_child(var);
+	}
+
+	int isScalar(){
+		for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++)
+			if((*it)->type->isArray)
+				return 0;
+		for(VariableList::iterator it = arguments->begin(); it!= arguments->end(); it++)
+			if((*it)->type->isArray)
+				return 0;
+		return 1;
 	}
 };
 

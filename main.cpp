@@ -37,18 +37,35 @@ void createCoreFunctions(CodeGenContext& context);
 void compile(Module &mod);
 
 
+//This converts all array return types into function arguments. 
+//TODO: fuctions with multiple scalar returns must be modified somehow
 void rewrite_arrays(NFunctionDeclaration *decl, Runtime *runtime){
-	if(decl->type->isArray){
-		NType *old_type = decl->type;
-		decl->SetType(new NType("void",0));
+	VariableList::iterator it;
+//	cout << decl << ", " << decl->returns << "\n";
+	for(it = decl->returns->begin(); it!=decl->returns->end();){
+		NVariableDeclaration *vdec = *it;
+//		cout << vdec << ", " << vdec->type << "\n";
+		if(vdec->type->isArray){
+			NType *old_type = vdec->type;
+//			decl->SetType(new NType("void",0));	
 
-		NVariableDeclaration *var = new NVariableDeclaration(old_type,new NIdentifier("return"),0);
-		decl->InsertArgument(decl->arguments->begin(),var);
+//			NVariableDeclaration *var = new NVariableDeclaration(old_type,new NIdentifier("return"),0);
+			//TODO: assign default names
+//			cout << "Insert\n";
+			decl->InsertArgument(decl->arguments->begin(),vdec);
+//			cout << "Remove: " << decl->returns << "\n";
+			it = decl->returns->erase(it);
+		}else
+			it++;
 	}
-	runtime->AddFunction(decl);
+//	cout << "done\n";
+	if(!decl->isGenerated)
+		runtime->AddFunction(decl);
 
-	NVariableDeclaration *idxvar = new NVariableDeclaration(new NType("int32",0),new NIdentifier("idx"),0);
-	decl->InsertArgument(decl->arguments->begin(),idxvar);
+	if(!decl->isScalar()){
+		NVariableDeclaration *idxvar = new NVariableDeclaration(new NType("int32",0),new NIdentifier("idx"),0);
+		decl->InsertArgument(decl->arguments->begin(),idxvar);
+	}
 }
 
 std::string create_anon_name(void) {
@@ -83,7 +100,7 @@ static NType* typeOf(string name, NBlock* pb){
 		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(func) {
 			if(name.compare(func->id->name)==0){
-				return func->type;
+				return (*(func->returns->begin()))->type;
 			}
 		}
 	}
@@ -104,16 +121,21 @@ NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,NType* type) {
 	//func_block->expressions.push_back(new NVariableDeclaration(new NType("return",0), *(map->vars->begin())));
 
 	std::string anon_name = create_anon_name();
-	NFunctionDeclaration *anon_func = new NFunctionDeclaration(type,
+	VariableList *retlist = new VariableList();
+	NVariableDeclaration *vardec = new NVariableDeclaration(type,new NIdentifier("return"));
+	retlist->push_back(vardec);
+	NFunctionDeclaration *anon_func = new NFunctionDeclaration(
+			retlist,
 			new NIdentifier(anon_name),
 			var_list,
 			func_block
 			);
+	anon_func->isGenerated=1;
 	map->anon_name = anon_name;
 
 	///////////////////////////
 	GType foo = GetType(pb,map->expr);
-	anon_func->SetType(foo.toNode());
+	vardec->SetType(foo.toNode());
 	//////////////////////////
 
 	return anon_func;
@@ -129,7 +151,7 @@ void rewrite_maps(NBlock *pb) {
 					NType* type = typeOf(func,pipeline->src);
 					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
 						NFunctionDeclaration *anon_func = extract_func(pb,*it3, type);
-						type = anon_func->type;
+						type = anon_func->returns->front()->type;
 						pb->add_child(pb->children.begin(), anon_func);
 					}
 				}
@@ -195,6 +217,39 @@ void rewrite_pipelines(NBlock *pb){
 	}
 }
 
+void auto_name_returns(NBlock *pb){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl){
+			VariableList::iterator it2;
+			//First count the number of unnamed parameters
+			int missing=0;
+			for(it2 = decl->returns->begin(); it2!=decl->returns->end(); it2++){
+				NVariableDeclaration *vdec = *it2;
+				if(!vdec->id){
+					missing++;
+				}
+			}
+
+			int count=0;
+			for(it2 = decl->returns->begin(); it2!=decl->returns->end(); it2++){
+				NVariableDeclaration *vdec = *it2;
+				if(!vdec->id){
+					char name[64];
+					if(missing>1){
+						sprintf(name,"return.%d",count++);
+					}else{
+						sprintf(name,"return");
+					}
+					vdec->id = new NIdentifier(name);
+				}
+			}
+
+		}
+	}
+}
+
 
 int main(int argc, char **argv)
 {
@@ -212,25 +267,25 @@ int main(int argc, char **argv)
 	yyin = infile;
 
 	yyparse();
-
-	cout << "Raw:\n";
-
 	Runtime *runtime = new Runtime();
 
+	cout << "Raw:\n";
 	std::cout << *programBlock << endl;
 
-	rewrite_arrays(programBlock,runtime);
-
+	auto_name_returns(programBlock);
 	cout << "Pass1:\n";
-
 	std::cout << *programBlock << endl;
 
 	rewrite_maps(programBlock);
 	cout << "Pass2:\n";
 	std::cout << *programBlock << endl;
 
-	cout << "Pass3:\n";
 	rewrite_pipelines(programBlock);
+	cout << "Pass3:\n";
+	cout << *programBlock;
+
+	rewrite_arrays(programBlock,runtime);
+	cout << "Pass4:\n";
 	cout << *programBlock;
 
 #if 1

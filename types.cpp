@@ -45,7 +45,7 @@ GType GetType(NBlock *pb, NExpression *exp){
 				NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*>(parent);
 				if(!func)
 					continue;
-				locals[func->id->name] = func->type->GetType(locals); 
+				locals[func->id->name] = func->returns->front()->GetType(locals); 
 			}
 		}
 	}

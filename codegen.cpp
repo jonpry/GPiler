@@ -69,13 +69,19 @@ static Type *typeOf(const NType* type)
 		ret = Type::getInt1Ty(getGlobalContext());
 	}else if (type->name.compare("void") == 0) {
 		ret = Type::getVoidTy(getGlobalContext());
-	} else cout << "Error unknown type\n";
+	} else cout << "Error unknown type: " << type->name << "\n";
 
 	if(type->isArray){
 		ret = PointerType::get(ret,1);//1 is global address space
 	}
 
 	return ret;
+}
+
+static Type *typeOf(const NVariableDeclaration *decl){
+	if(!decl)
+		return Type::getVoidTy(getGlobalContext());
+	return typeOf(decl->type);
 }
 
 /* Returns an LLVM type based on GType */
@@ -326,7 +332,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	for (it = arguments->begin(); it != arguments->end(); it++) {
 		argTypes.push_back(typeOf((**it).type));
 	}	
-	FunctionType *ftype = FunctionType::get(typeOf(type), makeArrayRef(argTypes), false);
+
+	FunctionType *ftype = FunctionType::get(typeOf(returns->front()), makeArrayRef(argTypes), false);
 	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id->name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 
@@ -351,7 +358,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
   	}
 
 	block->codeGen(context);
-	if(type->name.compare("void")==0)
+	if(returns->empty())
 		ReturnInst::Create(getGlobalContext(), bblock);
 
 	context.popBlock();

@@ -39,7 +39,7 @@ RuntimeInst::RuntimeInst(NFunctionDeclaration* func){
 }
 
 void RuntimeInst::print(){
-	cout << "void " << name << "_runtime(";
+	cout << "__global__ void " << name << "_runtime(";
 	
 	bool first=true;
 	VariableList::iterator it;
@@ -64,6 +64,14 @@ void RuntimeInst::print(){
 	}
 
 	cout << "){\n";
+///////////// TODO: generate this moar
+	cout << "\tfor(int i=0; i<N; i+=blockDim.x*gridDim.x){\n";
+  	cout << "\t\tint idx = i + blockIdx.x * blockDim.x + threadIdx.x;\n";
+	cout << "\t\tif (idx<N)\n";
+	cout << "\t\t\t" << name << "(idx,return,input)\n";
+  	cout << "\t}\n";
+	cout << "\t*return_size = input_size;\n";
+////////////
 	cout << "}\n";
 }
 

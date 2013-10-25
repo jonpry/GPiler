@@ -1,4 +1,23 @@
 %{
+/* 
+GPiler - parser.y
+Copyright (C) 2013 Jon Pry and Charles Cooper
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #include "node.h"
 #include <cstdio>
 #include <cstdlib>
@@ -35,7 +54,7 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV 
 %token <token> TSEMI TLBRACK TRBRACK TCOLON TDCOLON TQUEST
-
+%token <token> TLSL TLSR TAND TOR
 
 /* Define the type of node our nonterminal symbols represent.
    The types refer to the %union declaration above. Ex: when
@@ -43,28 +62,10 @@ void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
    calling an (NIdentifier*). It makes the compiler happy.
  */
 %type <ident> ident 
-/* 
-GPiler - parser.y
-Copyright (C) 2013 Jon Pry and Charles Cooper
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
 
 %type <type> type
-%type <expr> numeric expr assignment func_call pipeline stmt var_decl func_decl_arg 
-%type <varvec> func_decl_args
+%type <expr> numeric expr assignment func_call pipeline stmt var_decl func_decl_arg func_decl_ret
+%type <varvec> func_decl_args func_decl_rets
 %type <exprvec> call_args
 %type <pipevec> pipeline_chain
 %type <fvarvec> functional_vars
@@ -77,6 +78,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 %left TPLUS TMINUS
 %left TCEQ TCNE TCLT TCGT TCLE TCGE
 %left TMUL TDIV 
+%left TLSL TLSR TAND TOR
 
 %start program
 
@@ -124,9 +126,13 @@ var_decl : type ident { $$ = new NVariableDeclaration($1, $2); }
 
 func_decl_arg : type ident { $$ = new NVariableDeclaration($1, $2); }
 	;
+
+func_decl_ret : type ident { $$ = new NVariableDeclaration($1, $2); }
+	| type  { $$ = new NVariableDeclaration($1, 0); }
+	;
  
-func_decl : type ident TLPAREN func_decl_args TRPAREN block
-	{ $$ = new NFunctionDeclaration($1, $2, $4, $6); }
+func_decl : func_decl_rets TCOLON ident TLPAREN func_decl_args TRPAREN block
+	{ $$ = new NFunctionDeclaration($1, $3, $5, $7); }
 	;
 
 type : TIDENTIFIER { $$ = new NType(*$1,0); delete $1; }
@@ -136,6 +142,11 @@ type : TIDENTIFIER { $$ = new NType(*$1,0); delete $1; }
 func_decl_args : /*blank*/ { $$ = new VariableList(); }
 	| func_decl_arg { $$ = new VariableList(); $$->push_back($<var_decl>1); }
 	| func_decl_args TCOMMA func_decl_arg { $1->push_back($<var_decl>3); }
+	;
+
+func_decl_rets : /*blank*/ { $$ = new VariableList(); }
+	| func_decl_ret { $$ = new VariableList(); $$->push_back($<var_decl>1); }
+	| func_decl_rets TCOMMA func_decl_ret { $1->push_back($<var_decl>3); }
 	;
 
 ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
@@ -159,6 +170,10 @@ expr :  ident { $<ident>$ = $1; }
   	| expr TMINUS expr { $$ = new NBinaryOperator($1, $2, $3); }
   	| expr TMUL expr { $$ = new NBinaryOperator($1, $2, $3); }
   	| expr TDIV expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TOR expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TLSL expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TLSR expr { $$ = new NBinaryOperator($1, $2, $3); }
+  	| expr TAND expr { $$ = new NBinaryOperator($1, $2, $3); }
 	| expr TQUEST expr TCOLON expr { $$ = new NSelect($1, $3, $5); }
      	| TLPAREN expr TRPAREN { $$ = $2; }
 	| func_call
