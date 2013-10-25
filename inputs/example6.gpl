@@ -1,0 +1,5 @@
+
+[double] xp, [double] yp : mapit([int32] x, [int32] y){
+	x :: map(x : x + 2.0) > xp;
+	y :: map(y : y + 1.0) > yp;
+}

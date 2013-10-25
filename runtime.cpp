@@ -28,13 +28,13 @@ using namespace std;
 RuntimeInst::RuntimeInst(NFunctionDeclaration* func){
 	name = func->id->name;
 
-	int count=0;
 	VariableList::iterator it;
 	for(it = func->arguments->begin(); it!=func->arguments->end(); it++){
-		if(count++==0)
-			outputs.push_back(*it);
-		else
 			inputs.push_back(*it);
+	}
+
+	for(it = func->returns->begin(); it!=func->returns->end(); it++){
+			outputs.push_back(*it);
 	}
 }
 

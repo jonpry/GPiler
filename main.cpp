@@ -39,7 +39,7 @@ void compile(Module &mod);
 
 //This converts all array return types into function arguments. 
 //TODO: fuctions with multiple scalar returns must be modified somehow
-void rewrite_arrays(NFunctionDeclaration *decl, Runtime *runtime){
+void rewrite_arrays(NFunctionDeclaration *decl){
 	VariableList::iterator it;
 //	cout << decl << ", " << decl->returns << "\n";
 	for(it = decl->returns->begin(); it!=decl->returns->end();){
@@ -59,9 +59,7 @@ void rewrite_arrays(NFunctionDeclaration *decl, Runtime *runtime){
 			it++;
 	}
 //	cout << "done\n";
-	if(!decl->isGenerated)
-		runtime->AddFunction(decl);
-
+     
 	if(!decl->isScalar()){
 		NVariableDeclaration *idxvar = new NVariableDeclaration(new NType("int32",0),new NIdentifier("idx"),0);
 		decl->InsertArgument(decl->arguments->begin(),idxvar);
@@ -161,12 +159,23 @@ void rewrite_maps(NBlock *pb) {
 }
 
 //Array arguments are converted to pointers
-void rewrite_arrays(NBlock* programBlock, Runtime *runtime){
+void rewrite_arrays(NBlock* programBlock){
 	NodeList::iterator it;
 	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl){
-			rewrite_arrays(decl,runtime);
+			rewrite_arrays(decl);
+		}
+	}
+}
+
+void generate_runtime(NBlock* programBlock, Runtime* runtime){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl){
+			if(!decl->isGenerated)
+			runtime->AddFunction(decl);
 		}
 	}
 }
@@ -284,7 +293,11 @@ int main(int argc, char **argv)
 	cout << "Pass3:\n";
 	cout << *programBlock;
 
-	rewrite_arrays(programBlock,runtime);
+	/////////////////////////////////////////////////////////
+	// Passes below this point start losing too much context for building the runtime
+	generate_runtime(programBlock,runtime);
+
+	rewrite_arrays(programBlock);
 	cout << "Pass4:\n";
 	cout << *programBlock;
 
