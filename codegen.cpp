@@ -162,6 +162,24 @@ int isCmp(int op){
 	}
 }
 
+void Promote(Value **lhc, Value** rhc, NExpression *lhs, NExpression *rhs,CodeGenContext& context){
+	GType ltype = lhs->GetType(context.localTypes());
+	GType rtype = rhs->GetType(context.localTypes());
+
+	*lhc = lhs->codeGen(context);
+	*rhc = rhs->codeGen(context);
+
+	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
+		if(rtype.type != FLOAT_TYPE){
+			*rhc = new SIToFPInst(*rhc,typeOf(ltype),"", context.currentBlock());
+		}
+
+		if(ltype.type != FLOAT_TYPE){
+			*lhc = new SIToFPInst(*lhc,typeOf(rtype),"", context.currentBlock());
+		}
+	}
+}
+
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating binary operation " << op << endl;
@@ -173,19 +191,10 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 	GType ltype = lhs->GetType(context.localTypes());
 	GType rtype = rhs->GetType(context.localTypes());
 
+	Promote(&lhc,&rhc,lhs,rhs,context);
+
 	//TODO: argument promotion
 	if(ltype.type == FLOAT_TYPE || rtype.type == FLOAT_TYPE){
-		lhc = lhs->codeGen(context);
-		rhc = rhs->codeGen(context);
-
-		if(rtype.type != FLOAT_TYPE){
-			rhc = new SIToFPInst(rhc,typeOf(ltype),"", context.currentBlock());
-		}
-
-		if(ltype.type != FLOAT_TYPE){
-			lhc = new SIToFPInst(lhc,typeOf(rtype),"", context.currentBlock());
-		}
-
 		switch (op) {
 			case TPLUS: instr = Instruction::FAdd; break;
 			case TMINUS: instr = Instruction::FSub; break;
@@ -197,7 +206,7 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			case TCLE: pred = CmpInst::Predicate::FCMP_OLE; break;
 			case TCEQ: pred = CmpInst::Predicate::FCMP_OEQ; break;
 			case TCNE: pred = CmpInst::Predicate::FCMP_ONE; break;
-			default: cout << "Unknown op\n"; return 0;
+			default: cout << "Unknown FP op\n"; return 0;
 			/* TODO comparison */
 		}
 		if(isCmp(op)){
@@ -212,6 +221,10 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			case TMINUS: instr = Instruction::Sub; break;
 			case TMUL: instr = Instruction::Mul; break;
 			case TDIV: instr = Instruction::SDiv; break;
+			case TOR: instr = Instruction::Or; break;
+			case TAND: instr = Instruction::And; break;
+			case TLSL: instr = Instruction::Shl; break;
+			case TLSR: instr = Instruction::LShr; break;
 			case TCGT: pred = CmpInst::Predicate::ICMP_SGT; break;
 			case TCLT: pred = CmpInst::Predicate::ICMP_SLT; break;
 			case TCGE: pred = CmpInst::Predicate::ICMP_SGE; break;
@@ -220,8 +233,6 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			case TCNE: pred = CmpInst::Predicate::ICMP_NE; break;
 			default: cout << "Unknown op\n"; return 0;
 		}
-		lhc = lhs->codeGen(context);
-		rhc = rhs->codeGen(context);
 
 		if(isCmp(op)){
 			return new ICmpInst(*context.currentBlock(), pred, lhc, rhc, "");
@@ -231,12 +242,32 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 	}
 }
 
+Value* GetIntZero(){
+	return ConstantInt::get(Type::getInt32Ty(getGlobalContext()), 0, true);
+}
+
+Value* GetFloatZero(){
+	return ConstantFP::get(Type::getDoubleTy(getGlobalContext()), 0);
+}
+
 Value* NSelect::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating if operation " << endl;
-	//TODO: do automatic promotion on yes and no
 	
-	return SelectInst::Create(pred->codeGen(context), yes->codeGen(context), no->codeGen(context), "", context.currentBlock());
+	Value *lhc, *rhc;
+
+	Promote(&lhc,&rhc,yes,no,context);
+
+	GType ptype = pred->GetType(context.localTypes());
+	Value* predv = pred->codeGen(context);
+	if(ptype.type == INT_TYPE){
+		predv = new ICmpInst(*context.currentBlock(),CmpInst::Predicate::ICMP_NE,predv,GetIntZero());
+	}
+	if(ptype.type == FLOAT_TYPE){
+		predv = new FCmpInst(*context.currentBlock(),CmpInst::Predicate::FCMP_ONE,predv,GetFloatZero());
+	}	
+	
+	return SelectInst::Create(predv, lhc, rhc, "", context.currentBlock());
 }
 
 Value* NAssignment::codeGen(CodeGenContext& context)

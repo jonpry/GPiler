@@ -170,7 +170,20 @@ extern FILE *yyin, *yyout;
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
 
-    #define YY_LESS_LINENO(n)
+    /* Note: We specifically omit the test for yy_rule_can_match_eol because it requires
+     *       access to the local variable yy_act. Since yyless() is a macro, it would break
+     *       existing scanners that call yyless() from OUTSIDE yylex. 
+     *       One obvious solution it to make yy_act a global. I tried that, and saw
+     *       a 5% performance hit in a non-yylineno scanner, because yy_act is
+     *       normally declared as a register variable-- so it is not worth it.
+     */
+    #define  YY_LESS_LINENO(n) \
+            do { \
+                int yyl;\
+                for ( yyl = n; yyl < yyleng; ++yyl )\
+                    if ( yytext[yyl] == '\n' )\
+                        --yylineno;\
+            }while(0)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -468,6 +481,12 @@ static yyconst flex_int16_t yy_chk[72] =
        41
     } ;
 
+/* Table of booleans, true if rule could match eol. */
+static yyconst flex_int32_t yy_rule_can_match_eol[34] =
+    {   0,
+1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     };
+
 static yy_state_type yy_last_accepting_state;
 static char *yy_last_accepting_cpos;
 
@@ -508,7 +527,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define SAVE_TOKEN yylval.string = new std::string(yytext, yyleng)
 #define TOKEN(t) (yylval.token = t)
 extern "C" int yywrap() { }
-#line 512 "tokens.cpp"
+#line 531 "tokens.cpp"
 
 #define INITIAL 0
 
@@ -695,10 +714,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 29 "tokens.l"
+#line 30 "tokens.l"
 
 
-#line 702 "tokens.cpp"
+#line 721 "tokens.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -770,6 +789,16 @@ yy_find_action:
 
 		YY_DO_BEFORE_ACTION;
 
+		if ( yy_act != YY_END_OF_BUFFER && yy_rule_can_match_eol[yy_act] )
+			{
+			int yyl;
+			for ( yyl = 0; yyl < yyleng; ++yyl )
+				if ( yytext[yyl] == '\n' )
+					   
+    yylineno++;
+;
+			}
+
 do_action:	/* This label is used only to access EOF actions. */
 
 		switch ( yy_act )
@@ -784,170 +813,170 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 31 "tokens.l"
+#line 32 "tokens.l"
 ;
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 32 "tokens.l"
+#line 33 "tokens.l"
 SAVE_TOKEN; return TIDENTIFIER;
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 33 "tokens.l"
+#line 34 "tokens.l"
 SAVE_TOKEN; return TDOUBLE;
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 34 "tokens.l"
+#line 35 "tokens.l"
 SAVE_TOKEN; return TINTEGER;
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 35 "tokens.l"
+#line 36 "tokens.l"
 return TOKEN(TEQUAL);
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 36 "tokens.l"
+#line 37 "tokens.l"
 return TOKEN(TCEQ);
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 37 "tokens.l"
+#line 38 "tokens.l"
 return TOKEN(TCNE);
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 38 "tokens.l"
+#line 39 "tokens.l"
 return TOKEN(TCLT);
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 39 "tokens.l"
+#line 40 "tokens.l"
 return TOKEN(TCLE);
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 40 "tokens.l"
+#line 41 "tokens.l"
 return TOKEN(TCGT);
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 41 "tokens.l"
+#line 42 "tokens.l"
 return TOKEN(TCGE);
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 42 "tokens.l"
+#line 43 "tokens.l"
 return TOKEN(TLPAREN);
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 43 "tokens.l"
+#line 44 "tokens.l"
 return TOKEN(TRPAREN);
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 44 "tokens.l"
+#line 45 "tokens.l"
 return TOKEN(TLBRACE);
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 45 "tokens.l"
+#line 46 "tokens.l"
 return TOKEN(TRBRACE);
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 46 "tokens.l"
+#line 47 "tokens.l"
 return TOKEN(TDOT);
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 47 "tokens.l"
+#line 48 "tokens.l"
 return TOKEN(TCOMMA);
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 48 "tokens.l"
+#line 49 "tokens.l"
 return TOKEN(TPLUS);
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 49 "tokens.l"
+#line 50 "tokens.l"
 return TOKEN(TMINUS);
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 50 "tokens.l"
+#line 51 "tokens.l"
 return TOKEN(TMUL);
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 51 "tokens.l"
+#line 52 "tokens.l"
 return TOKEN(TDIV);
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 52 "tokens.l"
+#line 53 "tokens.l"
 return TOKEN(TSEMI);
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 53 "tokens.l"
+#line 54 "tokens.l"
 return TOKEN(TLBRACK);
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 54 "tokens.l"
+#line 55 "tokens.l"
 return TOKEN(TRBRACK);
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 55 "tokens.l"
+#line 56 "tokens.l"
 return TOKEN(TCOLON);
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 56 "tokens.l"
+#line 57 "tokens.l"
 return TOKEN(TDCOLON);
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 57 "tokens.l"
+#line 58 "tokens.l"
 return TOKEN(TQUEST);
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 58 "tokens.l"
+#line 59 "tokens.l"
 return TOKEN(TLSR);
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 59 "tokens.l"
+#line 60 "tokens.l"
 return TOKEN(TLSL);
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 60 "tokens.l"
+#line 61 "tokens.l"
 return TOKEN(TAND);
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 61 "tokens.l"
+#line 62 "tokens.l"
 return TOKEN(TOR);
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 62 "tokens.l"
+#line 63 "tokens.l"
 printf("Unknown token!\n"); yyterminate();
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 64 "tokens.l"
+#line 65 "tokens.l"
 ECHO;
 	YY_BREAK
-#line 951 "tokens.cpp"
+#line 980 "tokens.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1308,6 +1337,10 @@ static int yy_get_next_buffer (void)
 
 	*--yy_cp = (char) c;
 
+    if ( c == '\n' ){
+        --yylineno;
+    }
+
 	(yytext_ptr) = yy_bp;
 	(yy_hold_char) = *yy_cp;
 	(yy_c_buf_p) = yy_cp;
@@ -1382,6 +1415,11 @@ static int yy_get_next_buffer (void)
 	c = *(unsigned char *) (yy_c_buf_p);	/* cast for 8-bit char's */
 	*(yy_c_buf_p) = '\0';	/* preserve yytext */
 	(yy_hold_char) = *++(yy_c_buf_p);
+
+	if ( c == '\n' )
+		   
+    yylineno++;
+;
 
 	return c;
 }
@@ -1853,6 +1891,9 @@ static int yy_init_globals (void)
      * This function is called from yylex_destroy(), so don't allocate here.
      */
 
+    /* We do not touch yylineno unless the option is enabled. */
+    yylineno =  1;
+    
     (yy_buffer_stack) = 0;
     (yy_buffer_stack_top) = 0;
     (yy_buffer_stack_max) = 0;
@@ -1945,7 +1986,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 64 "tokens.l"
+#line 65 "tokens.l"
 
 
 /* A Bison parser, made by GNU Bison 2.5.  */
@@ -2027,7 +2068,7 @@ typedef union YYSTYPE
 {
 
 /* Line 2068 of yacc.c  */
-#line 31 "parser.y"
+#line 33 "parser.y"
 
 	Node *node;
 	NBlock *block;

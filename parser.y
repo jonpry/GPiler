@@ -24,7 +24,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 NBlock *programBlock; /* the top level root node of our final AST */
 
 extern int yylex();
-void yyerror(const char *s) { std::printf("Error: %s\n", s);std::exit(1); }
+extern int yylineno;
+extern char* yytext;
+void yyerror(const char *s) { std::printf("Error: %d: %s at %s\n", yylineno,s,yytext);std::exit(1); }
 %}
 
 /* Represents the many different ways we can access our data */
