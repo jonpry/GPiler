@@ -201,13 +201,12 @@ void rewrite_pipelines(NBlock *pb){
 						NMap* map = *it3;
 						string new_name = create_temp_name();
 					
-						ExpressionList *args = new ExpressionList();
-						args->push_back(new NIdentifier(temp_name));
-						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
 						type = typeOf(map->anon_name,pb);
-						NVariableDeclaration *map_dec = new NVariableDeclaration(type,new NIdentifier(new_name), mc);
+						NVariableDeclaration *map_dec = new NVariableDeclaration(type,new NIdentifier(new_name), 0);
 						decl->block->children.insert(it2,map_dec);						
 
+						NTriad *triad = new NTriad(new NIdentifier(temp_name), map, new NIdentifier(new_name));
+						decl->block->children.insert(it2,triad);
 						temp_name = new_name;
 					}
 
@@ -225,6 +224,34 @@ void rewrite_pipelines(NBlock *pb){
 		}
 	}
 }
+
+void rewrite_triads(NBlock *pb){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl){
+			NodeList::iterator it2;
+			for(it2 = decl->block->children.begin(); it2 != decl->block->children.end(); ){
+				NTriad *triad = dynamic_cast<NTriad*>(*it2);
+				if(triad){
+
+					ExpressionList *args = new ExpressionList();
+					args->push_back(triad->src);
+					NMethodCall *mc = new NMethodCall(new NIdentifier(triad->map->anon_name),args);
+					NAssignment *assn = new NAssignment(triad->dst, mc);
+
+					decl->block->children.insert(it2,assn);						
+
+					//TODO: delete the pipeline now that it is dangling
+					it2 = decl->block->children.erase(it2);
+				}else{
+					it2++;
+				}
+			}
+		}
+	}
+}
+
 
 void auto_name_returns(NBlock *pb){
 	NodeList::iterator it;
@@ -293,12 +320,16 @@ int main(int argc, char **argv)
 	cout << "Pass3:\n";
 	cout << *programBlock;
 
+	rewrite_triads(programBlock);
+	cout << "Pass4:\n";
+	cout << *programBlock;
+
 	/////////////////////////////////////////////////////////
 	// Passes below this point start losing too much context for building the runtime
 	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass4:\n";
+	cout << "Pass5:\n";
 	cout << *programBlock;
 
 #if 1

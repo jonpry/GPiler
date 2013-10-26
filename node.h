@@ -235,6 +235,25 @@ public:
 	}
 };
 
+class NTriad : public NExpression {
+public:
+	NIdentifier *src,*dst;
+	NMap *map;
+	NTriad(NIdentifier *src, NMap *map, NIdentifier *dst) : src(src), map(map), dst(dst) {
+		add_child(src);
+		add_child(dst);
+		add_child(map);
+	}
+
+	void print(ostream& os) { 
+		os << "Triad:\n";
+		sTabs++;
+		os << *src;
+		os << *dst;
+		os << *map;
+		sTabs--;
+	}
+};
 
 class NBinaryOperator : public NExpression {
 public:
