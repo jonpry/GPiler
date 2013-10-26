@@ -80,15 +80,28 @@ std::string create_temp_name(void) {
 	return std::string(buf);
 }
 
-static NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var){
+static NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var, int allowArray){
 	for(VariableList::iterator it = decl->arguments->begin(); it != decl->arguments->end(); it++){
 		NVariableDeclaration *vdec = *it;
 		if(vdec->id->name.compare(var->name) == 0){
-			return new NType(vdec->type->name,0);
+			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
 		}
 	}
-	//TODO: search function block for declarations too
-	cout << "Couldn't find var\n";
+
+	for(VariableList::iterator it = decl->returns->begin(); it != decl->returns->end(); it++){
+		NVariableDeclaration *vdec = *it;
+		if(vdec->id->name.compare(var->name) == 0){
+			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+		}
+	}
+
+	for(NodeList::iterator it = decl->block->children.begin(); it != decl->block->children.end(); it++){
+		NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it);
+		if(vdec && vdec->id->name.compare(var->name) == 0){
+			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+		}
+	}
+	cout << "Couldn't find var: " << var->name << "\n";
 	return 0;
 }
 
@@ -146,7 +159,7 @@ void rewrite_maps(NBlock *pb) {
 			for (NodeList::iterator it2 = func->block->children.begin(); it2 != func->block->children.end(); it2++) {
 				NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it2);
 				if (pipeline) {
-					NType* type = typeOf(func,pipeline->src);
+					NType* type = typeOf(func,pipeline->src,0);
 					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
 						NFunctionDeclaration *anon_func = extract_func(pb,*it3, type);
 						type = anon_func->returns->front()->type;
@@ -180,6 +193,23 @@ void generate_runtime(NBlock* programBlock, Runtime* runtime){
 	}
 }
 
+//Array temps become scalars
+void remove_array_temps(NBlock* programBlock){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl){
+			NodeList::iterator it2;
+			for(it2 = decl->block->children.begin(); it2!=decl->block->children.end(); it2++){
+				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+				if(vdec){
+					vdec->type->isArray=0;
+				}
+			}
+		}
+	}
+}
+
 void rewrite_pipelines(NBlock *pb){
 	NodeList::iterator it;
 	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
@@ -191,9 +221,13 @@ void rewrite_pipelines(NBlock *pb){
 				if(pipe){
 					string temp_name = create_temp_name();
 					//Load it
-					NArrayRef *iptr = new NArrayRef(pipe->src,new NIdentifier("idx"));
-					NType* type = typeOf(decl,pipe->src);
-					NVariableDeclaration *dec = new NVariableDeclaration(type, new NIdentifier(temp_name),iptr);
+					NType* type = typeOf(decl,pipe->src,1);
+					NExpression* srcexp = pipe->src;
+					cout << *type;
+					if(type->isArray)
+						srcexp = new NArrayRef(pipe->src,new NIdentifier("idx"));
+					type = typeOf(decl,pipe->src,0);
+					NVariableDeclaration *dec = new NVariableDeclaration(type, new NIdentifier(temp_name),srcexp);
 					decl->block->children.insert(it2,dec);
 
 					MapList::iterator it3;
@@ -211,8 +245,14 @@ void rewrite_pipelines(NBlock *pb){
 					}
 
 					//Store it
-					NArrayRef *sptr = new NArrayRef(pipe->dest,new NIdentifier("idx"));
-					NAssignment *store = new NAssignment(sptr,new NIdentifier(temp_name));
+					type = typeOf(decl,pipe->dest,1);
+					NExpression *store;
+					if(type->isArray){
+						NArrayRef* storeref = new NArrayRef(pipe->dest,new NIdentifier("idx"));
+						store = new NAssignment(storeref,new NIdentifier(temp_name));
+					}else{
+						store = new NAssignment(new NIdentifier(temp_name),pipe->dest);
+					}
 					decl->block->children.insert(it2,store);
 
 					//TODO: delete the pipeline now that it is dangling
@@ -306,31 +346,35 @@ int main(int argc, char **argv)
 	Runtime *runtime = new Runtime();
 
 	cout << "Raw:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	auto_name_returns(programBlock);
 	cout << "Pass1:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	rewrite_maps(programBlock);
 	cout << "Pass2:\n";
 	std::cout << *programBlock << endl;
 
-	rewrite_pipelines(programBlock);
+	remove_array_temps(programBlock);
 	cout << "Pass3:\n";
+	std::cout << *programBlock << endl;
+
+	rewrite_pipelines(programBlock);
+	cout << "Pass4:\n";
 	cout << *programBlock;
 
 	rewrite_triads(programBlock);
-	cout << "Pass4:\n";
-	cout << *programBlock;
+	cout << "Pass5:\n";
+//	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
 	// Passes below this point start losing too much context for building the runtime
 	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass5:\n";
-	cout << *programBlock;
+	cout << "Pass6:\n";
+//	cout << *programBlock;
 
 #if 1
 	CodeGenContext context;
