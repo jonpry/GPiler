@@ -277,14 +277,13 @@ void remove_empty_decls(NBlock *pb){
 						if(assn && vdec->id->name.compare(assn->lhs->name)==0){
 							found = true;
 							vdec->SetExpr(assn->rhs);
+							decl->block->children.insert(it3,vdec);
 							decl->block->children.erase(it3);
 							break;
 						}
 					}
-					if(found)
-						it2++;
-					else
-						it2 = decl->block->children.erase(it2);
+					//Alway erase the declaration since it has been moved 
+					it2 = decl->block->children.erase(it2);
 				}else
 					it2++;
 			}
@@ -387,17 +386,17 @@ int main(int argc, char **argv)
 
 	rewrite_triads(programBlock);
 	cout << "Pass5:\n";
-//	cout << *programBlock;
+	cout << *programBlock;
 
 	remove_empty_decls(programBlock);
 	cout << "Pass6:\n";
-//	cout << *programBlock;
+	cout << *programBlock;
 
 	split_unnatural(programBlock);
 
 	rewrite_argument_access(programBlock);
 	cout << "Pass7:\n";
-//	cout << *programBlock;
+	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
 	// Passes below this point start losing too much context for building the runtime
