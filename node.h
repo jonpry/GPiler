@@ -144,12 +144,12 @@ public:
 
 class NMap : public NExpression {
 public:
-	NIdentifier* name;
+	NIdentifier* name, *input;
 	IdList *vars;
 	NExpression* expr;
 	string anon_name;
 
-	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr) { 
+	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr), input(0) { 
 		add_child(name);
 		for(IdList::iterator it = vars->begin(); it!=vars->end(); it++)
 			add_child(*it);
@@ -166,7 +166,15 @@ public:
 			os << ** it;
 		} 
 		os << *expr;
+		if(input)
+			os << *input;
 		sTabs--;
+	}
+
+	void SetInput(NIdentifier *in){
+		children.remove(input);
+		add_child(in);
+		input = in;
 	}
 
 	int isNatural(){
@@ -420,7 +428,11 @@ public:
 	}
 
 	void SetArray(NArrayRef *ary){
+		if(array)
+			children.remove(array);
 		add_child(ary);
+		if(lhs)
+			children.remove(lhs);
 		lhs = 0;
 		array = ary;
 	}
@@ -474,6 +486,7 @@ public:
 	}
 
 	void SetExpr(NExpression* expr){
+		children.remove(assignmentExpr);
 		add_child(expr);
 		assignmentExpr = expr;
 	}

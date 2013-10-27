@@ -192,11 +192,10 @@ void rewrite_pipelines(NBlock *pb){
 						string new_name = create_temp_name();
 					
 						type = typeOf(map->anon_name,pb);
-						NVariableDeclaration *map_dec = new NVariableDeclaration(type,new NIdentifier(new_name), 0);
+						map->SetInput(new NIdentifier(temp_name));
+						NVariableDeclaration *map_dec = new NVariableDeclaration(type,new NIdentifier(new_name), map);
 						decl->block->children.insert(it2,map_dec);						
 
-						NTriad *triad = new NTriad(new NIdentifier(temp_name), map, new NIdentifier(new_name));
-						decl->block->children.insert(it2,triad);
 						temp_name = new_name;
 					}
 
@@ -212,27 +211,6 @@ void rewrite_pipelines(NBlock *pb){
 		}
 	}
 }
-
-/*					//Load it
-					NType* type = typeOf(decl,pipe->src,1);
-					NExpression* srcexp = pipe->src;
-					cout << *type;
-					if(type->isArray)
-						srcexp = new NArrayRef(pipe->src,new NIdentifier("idx"));
-
-
-					//Store it
-					type = typeOf(decl,pipe->dest,1);
-					NExpression *store;
-					if(type->isArray){
-						NArrayRef* storeref = new NArrayRef(pipe->dest,new NIdentifier("idx"));
-						store = new NAssignment(storeref,new NIdentifier(temp_name));
-					}else{
-						store = new NAssignment(pipe->dest,new NIdentifier(temp_name));
-					}
-					decl->block->children.insert(it2,store);
-*/
-
 
 //Go ahead and fix codes to deal with any pointers that may be present
 void rewrite_argument_access(NBlock *pb){
@@ -267,34 +245,69 @@ void rewrite_triads(NBlock *pb){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl){
 			NodeList::iterator it2;
-			for(it2 = decl->block->children.begin(); it2 != decl->block->children.end(); ){
-				NTriad *triad = dynamic_cast<NTriad*>(*it2);
-				if(triad){
-
-					ExpressionList *args = new ExpressionList();
-					args->push_back(triad->src);
-					NMethodCall *mc = new NMethodCall(new NIdentifier(triad->map->anon_name),args);
-					NAssignment *assn = new NAssignment(triad->dst, mc);
-
-					decl->block->children.insert(it2,assn);						
-
-					//TODO: delete the pipeline now that it is dangling
-					it2 = decl->block->children.erase(it2);
-				}else{
-					it2++;
+			for(it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
+				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+				if(vdec){
+					NMap* map = dynamic_cast<NMap*>(vdec->assignmentExpr);
+					if(map){
+						ExpressionList *args = new ExpressionList();
+						args->push_back(map->input);
+						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
+						vdec->SetExpr(mc);
+					}
 				}
 			}
 		}
 	}
 }
 
+void remove_empty_decls(NBlock *pb){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl && !decl->isGenerated){
+			//Locate all declarations that have no assigment
+			for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end();){
+				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+				if(vdec && !vdec->assignmentExpr){
+					//See if we can locate an assigment for it
+					bool found=false;
+					for(NodeList::iterator it3 = it2; it3 != decl->block->children.end(); it3++){
+						NAssignment *assn = dynamic_cast<NAssignment*>(*it3);
+						if(assn && vdec->id->name.compare(assn->lhs->name)==0){
+							found = true;
+							vdec->SetExpr(assn->rhs);
+							decl->block->children.erase(it3);
+							break;
+						}
+					}
+					if(found)
+						it2++;
+					else
+						it2 = decl->block->children.erase(it2);
+				}else
+					it2++;
+			}
+		}
+	}
+}
+
+bool isNatural(NVariableDeclaration *vdec, NFunctionDeclaration *decl){
+	//TODO: implement me
+	return true;
+}
+
+//TODO: this function requires conversion to strict SSA first
 void split_unnatural(NBlock *pb){
 	NodeList::iterator it;
 	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
 		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
 		if(decl && !decl->isGenerated){
 			for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
-				cout << "TODO:\n";
+				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+				if(vdec && !isNatural(vdec,decl)){
+					
+				}
 			}
 		}
 	}
@@ -376,10 +389,14 @@ int main(int argc, char **argv)
 	cout << "Pass5:\n";
 //	cout << *programBlock;
 
+	remove_empty_decls(programBlock);
+	cout << "Pass6:\n";
+//	cout << *programBlock;
+
 	split_unnatural(programBlock);
 
 	rewrite_argument_access(programBlock);
-	cout << "Pass6:\n";
+	cout << "Pass7:\n";
 //	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
@@ -387,7 +404,7 @@ int main(int argc, char **argv)
 	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass7:\n";
+	cout << "Pass8:\n";
 //	cout << *programBlock;
 
 #if 1
