@@ -43,6 +43,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 using namespace llvm;
 
 GType GetType(NBlock *pb, NExpression *exp);
+NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var, int allowArray);
+NType* typeOf(string name, NBlock* pb);
 
 class NBlock;
 

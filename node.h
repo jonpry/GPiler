@@ -168,6 +168,10 @@ public:
 		os << *expr;
 		sTabs--;
 	}
+
+	int isNatural(){
+		return !name->name.compare("map");
+	}
 };
 
 class NType: public NIdentifier {
@@ -414,6 +418,12 @@ public:
 		os << *rhs; 
 		sTabs--;
 	}
+
+	void SetArray(NArrayRef *ary){
+		add_child(ary);
+		lhs = 0;
+		array = ary;
+	}
 };
 
 class NBlock : public NExpression {
@@ -461,6 +471,11 @@ public:
 		children.remove(type);
 		add_child(new_type);
 		type = new_type;
+	}
+
+	void SetExpr(NExpression* expr){
+		add_child(expr);
+		assignmentExpr = expr;
 	}
 
 	GType GetType(map<std::string, GType> &locals){ return type->GetType(locals); }

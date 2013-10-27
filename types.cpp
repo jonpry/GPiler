@@ -71,6 +71,45 @@ void GType::print(){
 	cout << type << ", " << length << "\n";
 }
 
+NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var, int allowArray){
+	for(VariableList::iterator it = decl->arguments->begin(); it != decl->arguments->end(); it++){
+		NVariableDeclaration *vdec = *it;
+		if(vdec->id->name.compare(var->name) == 0){
+			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+		}
+	}
+
+	for(VariableList::iterator it = decl->returns->begin(); it != decl->returns->end(); it++){
+		NVariableDeclaration *vdec = *it;
+		if(vdec->id->name.compare(var->name) == 0){
+			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+		}
+	}
+
+	for(NodeList::iterator it = decl->block->children.begin(); it != decl->block->children.end(); it++){
+		NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it);
+		if(vdec && vdec->id->name.compare(var->name) == 0){
+			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+		}
+	}
+	cout << "Couldn't find var: " << var->name << "\n";
+	exit(-1);
+	return 0;
+}
+
+NType* typeOf(string name, NBlock* pb){
+	NodeList::iterator it;
+	for(it = pb->children.begin(); it!=pb->children.end(); it++){
+		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(func) {
+			if(name.compare(func->id->name)==0){
+				return (*(func->returns->begin()))->type;
+			}
+		}
+	}
+	return 0;
+}
+
 NType* GType::toNode(){
 	string stype;
 	if(type==FLOAT_TYPE){

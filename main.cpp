@@ -80,44 +80,6 @@ std::string create_temp_name(void) {
 	return std::string(buf);
 }
 
-static NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var, int allowArray){
-	for(VariableList::iterator it = decl->arguments->begin(); it != decl->arguments->end(); it++){
-		NVariableDeclaration *vdec = *it;
-		if(vdec->id->name.compare(var->name) == 0){
-			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
-		}
-	}
-
-	for(VariableList::iterator it = decl->returns->begin(); it != decl->returns->end(); it++){
-		NVariableDeclaration *vdec = *it;
-		if(vdec->id->name.compare(var->name) == 0){
-			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
-		}
-	}
-
-	for(NodeList::iterator it = decl->block->children.begin(); it != decl->block->children.end(); it++){
-		NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it);
-		if(vdec && vdec->id->name.compare(var->name) == 0){
-			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
-		}
-	}
-	cout << "Couldn't find var: " << var->name << "\n";
-	return 0;
-}
-
-static NType* typeOf(string name, NBlock* pb){
-	NodeList::iterator it;
-	for(it = pb->children.begin(); it!=pb->children.end(); it++){
-		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
-		if(func) {
-			if(name.compare(func->id->name)==0){
-				return (*(func->returns->begin()))->type;
-			}
-		}
-	}
-	return 0;
-}
-
 NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,NType* type) {
 	VariableList *var_list = new VariableList;
 	// turn ids into vars
@@ -220,14 +182,8 @@ void rewrite_pipelines(NBlock *pb){
 				NPipeLine *pipe = dynamic_cast<NPipeLine*>(*it2);
 				if(pipe){
 					string temp_name = create_temp_name();
-					//Load it
-					NType* type = typeOf(decl,pipe->src,1);
-					NExpression* srcexp = pipe->src;
-					cout << *type;
-					if(type->isArray)
-						srcexp = new NArrayRef(pipe->src,new NIdentifier("idx"));
-					type = typeOf(decl,pipe->src,0);
-					NVariableDeclaration *dec = new NVariableDeclaration(type, new NIdentifier(temp_name),srcexp);
+					NType *type = typeOf(decl,pipe->src,0);
+					NVariableDeclaration *dec = new NVariableDeclaration(type, new NIdentifier(temp_name),pipe->src);
 					decl->block->children.insert(it2,dec);
 
 					MapList::iterator it3;
@@ -244,6 +200,27 @@ void rewrite_pipelines(NBlock *pb){
 						temp_name = new_name;
 					}
 
+					NExpression* store = new NAssignment(pipe->dest,new NIdentifier(temp_name));
+					decl->block->children.insert(it2,store);
+
+					//TODO: delete the pipeline now that it is dangling
+					it2 = decl->block->children.erase(it2);
+				}else{
+					it2++;
+				}
+			}
+		}
+	}
+}
+
+/*					//Load it
+					NType* type = typeOf(decl,pipe->src,1);
+					NExpression* srcexp = pipe->src;
+					cout << *type;
+					if(type->isArray)
+						srcexp = new NArrayRef(pipe->src,new NIdentifier("idx"));
+
+
 					//Store it
 					type = typeOf(decl,pipe->dest,1);
 					NExpression *store;
@@ -251,14 +228,33 @@ void rewrite_pipelines(NBlock *pb){
 						NArrayRef* storeref = new NArrayRef(pipe->dest,new NIdentifier("idx"));
 						store = new NAssignment(storeref,new NIdentifier(temp_name));
 					}else{
-						store = new NAssignment(new NIdentifier(temp_name),pipe->dest);
+						store = new NAssignment(pipe->dest,new NIdentifier(temp_name));
 					}
 					decl->block->children.insert(it2,store);
+*/
 
-					//TODO: delete the pipeline now that it is dangling
-					it2 = decl->block->children.erase(it2);
-				}else{
-					it2++;
+
+//Go ahead and fix codes to deal with any pointers that may be present
+void rewrite_argument_access(NBlock *pb){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl){
+			NodeList::iterator it2;
+			for(it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
+				NAssignment *assn = dynamic_cast<NAssignment*>(*it2);
+				if(assn && assn->lhs){
+					NType* type = typeOf(decl,assn->lhs,1);
+					if(type->isArray){
+						assn->SetArray(new NArrayRef(assn->lhs,new NIdentifier("idx")));
+					}
+				}
+				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+				if(vdec && vdec->assignmentExpr &&  dynamic_cast<NIdentifier*>(vdec->assignmentExpr)){
+					NType* type = typeOf(decl,(NIdentifier*)vdec->assignmentExpr,1);
+					if(type->isArray){
+						vdec->SetExpr(new NArrayRef((NIdentifier*)vdec->assignmentExpr,new NIdentifier("idx")));
+					}
 				}
 			}
 		}
@@ -287,6 +283,18 @@ void rewrite_triads(NBlock *pb){
 				}else{
 					it2++;
 				}
+			}
+		}
+	}
+}
+
+void split_unnatural(NBlock *pb){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl && !decl->isGenerated){
+			for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
+				cout << "TODO:\n";
 			}
 		}
 	}
@@ -354,18 +362,24 @@ int main(int argc, char **argv)
 
 	rewrite_maps(programBlock);
 	cout << "Pass2:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	remove_array_temps(programBlock);
 	cout << "Pass3:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	rewrite_pipelines(programBlock);
 	cout << "Pass4:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	rewrite_triads(programBlock);
 	cout << "Pass5:\n";
+//	cout << *programBlock;
+
+	split_unnatural(programBlock);
+
+	rewrite_argument_access(programBlock);
+	cout << "Pass6:\n";
 //	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
@@ -373,7 +387,7 @@ int main(int argc, char **argv)
 	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass6:\n";
+	cout << "Pass7:\n";
 //	cout << *programBlock;
 
 #if 1
