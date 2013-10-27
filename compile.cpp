@@ -32,6 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #define FOR_NV
 
@@ -39,9 +41,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 	#define TRIPLE "nvptx64-unknown-unknown"
 	#define MARCH "nvptx64"
 #else
+#if 0
 	#define TRIPLE "x86_64-unknown-linux-gnu"
 	#define MARCH "x86-64"
+#else
+	#define TRIPLE "cpp"
+	#define MARCH "cpp"
 #endif
+#endif
+
+void AddOptimizationPasses(PassManagerBase &MPM, FunctionPassManager &FPM, unsigned OptLevel, unsigned SizeLevel) {
+    PassManagerBuilder Builder;
+    FPM.add(createVerifierPass());
+    Builder.OptLevel = OptLevel;
+    Builder.SizeLevel = SizeLevel;
+
+    Builder.Inliner = createAlwaysInlinerPass();
+    Builder.DisableUnrollLoops = OptLevel == 0;
+    Builder.populateFunctionPassManager(FPM);
+    Builder.populateModulePassManager(MPM);
+
+}
+
+static void AddStandardCompilePasses(PassManagerBase &PM) {
+    PM.add(createVerifierPass()); // Verify that input is correc
+    PassManagerBuilder Builder;
+    Builder.Inliner = createFunctionInliningPass();
+    Builder.OptLevel = 3;
+    Builder.populateModulePassManager(PM);
+}
 
 void compile(Module &mod){
 	InitializeAllTargets();
@@ -57,6 +85,14 @@ void compile(Module &mod){
   	initializeLoopStrengthReducePass(*Registry);
   	initializeLowerIntrinsicsPass(*Registry);
   	initializeUnreachableBlockElimPass(*Registry);
+    	initializeScalarOpts(*Registry);
+    	initializeIPO(*Registry);
+    	initializeAnalysis(*Registry);
+    	initializeIPA(*Registry);
+    	initializeTransformUtils(*Registry);
+    	initializeInstCombine(*Registry);
+    	initializeInstrumentation(*Registry);
+    	initializeTarget(*Registry);
 
 
  	mod.setTargetTriple(Triple::normalize(TRIPLE));
@@ -121,19 +157,33 @@ void compile(Module &mod){
 
 	// Build up all of the passes that we want to do to the module.
   	PassManager PM;
+	FunctionPassManager FPM(&mod);
 	
 	// Add intenal analysis passes from the target machine.
   	Target.addAnalysisPasses(PM);
 
   	// Add the target data from the target machine, if it exists, or the module.
- 	if (const DataLayout *TD = Target.getDataLayout())
+ 	if (const DataLayout *TD = Target.getDataLayout()){
     		PM.add(new DataLayout(*TD));
-  	else
+		FPM.add(new DataLayout(*TD));
+  	}else
     		PM.add(new DataLayout(&mod));
 
+	AddStandardCompilePasses(PM);
+	PM.add( createFunctionInliningPass(275));
+
+   	FPM.doInitialization();
+    	for (Module::iterator F = mod.begin(), E = mod.end(); F != E; ++F)
+        	FPM.run(*F);
+    	FPM.doFinalization();
 
 
-  	// Override default to generate verbose assembly.
+    	AddOptimizationPasses(PM, FPM, 3, 0);
+    	PM.add(createVerifierPass());
+
+
+
+	// Override default to generate verbose assembly.
   	Target.setAsmVerbosityDefault(true);
 
   	{

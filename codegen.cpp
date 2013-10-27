@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "codegen.h"
 #include "parser.hpp"
 
+#include "llvm/Transforms/IPO.h"
+
 using namespace std;
 
 /* Compile the AST into a module */
@@ -35,6 +37,7 @@ void CodeGenContext::generateCode(NBlock& root)
 	*/
 	std::cout << "Code is generated.\n";
 	PassManager pm;
+	pm.add( createFunctionInliningPass(275));
 	pm.add(createPrintModulePass(&outs()));
 	pm.run(*module);
 }
@@ -365,7 +368,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	}	
 
 	FunctionType *ftype = FunctionType::get(typeOf(returns->front()), makeArrayRef(argTypes), false);
-	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id->name.c_str(), context.module);
+	Function *function = Function::Create(ftype, isGenerated?GlobalValue::InternalLinkage:GlobalValue::ExternalLinkage, id->name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 
 	addKernelMetadata(function);
