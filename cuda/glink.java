@@ -53,7 +53,7 @@ public class glink {
 				continue;
 			}
 			
-			if(line.startsWith(".func")){
+			if(line.startsWith(".func") || line.startsWith(".visible")){
 				System.out.println(line);
 				running=true;
 			}

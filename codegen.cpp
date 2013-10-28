@@ -37,7 +37,7 @@ void CodeGenContext::generateCode(NBlock& root)
 	*/
 	std::cout << "Code is generated.\n";
 	PassManager pm;
-	pm.add( createFunctionInliningPass(275));
+	//pm.add( createFunctionInliningPass(275));
 	pm.add(createPrintModulePass(&outs()));
 	pm.run(*module);
 }

@@ -1,7 +1,11 @@
 
-[double] xp, [double] yp : mapit([double] x, [double] y){
+[double] xp, [double] x1p, [double] yp, [double] y1p : mapit([double] x, [double] y){
 	[double] temp;
 	x :: map(x : x + 1) > temp;
 	temp :: map(x : x * 2) > xp;
-	y :: map(y : y + 3) > yp;
+	temp :: map(x : x * 3) > x1p;
+
+	y :: map(y : y + 3) > temp;
+	temp :: map(y : y * 4) > yp;
+	temp :: map(y : y * 5) > y1p;	
 }

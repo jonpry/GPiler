@@ -312,6 +312,54 @@ void split_unnatural(NBlock *pb){
 	}
 }
 
+//Assumes all declaration have an expression
+void to_ssa(NBlock *pb){
+	NodeList::iterator it;
+	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
+		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
+		if(decl && !decl->isGenerated){
+			map<string,int> vars;
+			map<string,NType*> types;
+			for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
+				IdList ids;
+				((NExpression*)(*it2))->GetIdRefs(ids);
+
+				for(IdList::iterator it3=ids.begin(); it3!=ids.end(); it3++){
+					NIdentifier *id = *it3;
+					if(vars.find(id->name) != vars.end() && vars[id->name]){
+						char new_name[64];
+						sprintf(new_name,"%s.%d", id->name.c_str(),  vars[id->name]);
+						id->name = new_name; 					
+					}
+				}
+
+				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+				if(vdec){
+					vars[vdec->id->name] = 0;
+					types[vdec->id->name] = vdec->type;
+				}
+
+				NAssignment* assn = dynamic_cast<NAssignment*>(*it2);
+				if(assn){
+					if(vars.find(assn->lhs->name) != vars.end()){
+						//TODO: change assn to vdec
+						NVariableDeclaration *new_dec = new NVariableDeclaration(types[assn->lhs->name], assn->lhs, assn->rhs);
+						decl->block->children.insert(it2,new_dec);
+						it2 = decl->block->children.erase(it2);
+						it2--;
+
+						//rename!!!!!!!
+						vars[assn->lhs->name] = vars[assn->lhs->name] + 1;
+						char new_name[64];
+						sprintf(new_name,"%s.%d", assn->lhs->name.c_str(),  vars[assn->lhs->name]);
+						assn->lhs->name = new_name; 
+					}
+				}
+			}
+		}
+	}
+}
+
 
 void auto_name_returns(NBlock *pb){
 	NodeList::iterator it;
@@ -384,26 +432,31 @@ int main(int argc, char **argv)
 	cout << "Pass4:\n";
 //	cout << *programBlock;
 
-	rewrite_triads(programBlock);
-	cout << "Pass5:\n";
-	cout << *programBlock;
-
 	remove_empty_decls(programBlock);
+	cout << "Pass5:\n";
+//	cout << *programBlock;
+
+	to_ssa(programBlock);
 	cout << "Pass6:\n";
 	cout << *programBlock;
+
+	rewrite_triads(programBlock);
+	cout << "Pass7:\n";
+//	cout << *programBlock;
+
 
 	split_unnatural(programBlock);
 
 	rewrite_argument_access(programBlock);
-	cout << "Pass7:\n";
-	cout << *programBlock;
+	cout << "Pass8:\n";
+//	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
 	// Passes below this point start losing too much context for building the runtime
 	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass8:\n";
+	cout << "Pass9:\n";
 //	cout << *programBlock;
 
 #if 1

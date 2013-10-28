@@ -108,6 +108,7 @@ public:
 	void print(ostream& os) { os << "Unknown Expression: " <<  typeid(*this).name() << "\n"; }
 	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type: " <<  typeid(*this).name() << "\n"; }
 	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type2: " <<  typeid(*this).name() << "\n"; }
+	virtual void GetIdRefs(IdList &list) { cout << "Unknown idref: " <<  typeid(*this).name() << "\n"; }
 };
 
 class NStatement : public Node {
@@ -140,6 +141,7 @@ public:
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << "Identifier: " << name << "\n"; }
 	GType GetType(map<std::string, GType> &locals);
+	void GetIdRefs(IdList &list) { list.push_back(this); }
 };
 
 class NMap : public NExpression {
@@ -180,6 +182,8 @@ public:
 	int isNatural(){
 		return !name->name.compare("map");
 	}
+
+	void GetIdRefs(IdList &list) { input->GetIdRefs(list); }
 };
 
 class NType: public NIdentifier {
@@ -207,6 +211,12 @@ public:
 		add_child(id);
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+
+	void GetIdRefs(IdList &list) { 
+		for(ExpressionList::iterator it = arguments->begin(); it!= arguments->end(); it++){
+			(*it)->GetIdRefs(list);
+		}
+	}
 
 	void print(ostream& os) { 
 		os << "MethodCall:\n";
@@ -408,6 +418,8 @@ public:
 		return ret;	
 	}
 
+	void GetIdRefs(IdList &list) { rhs->GetIdRefs(list); }
+
 	void init(){
 		if(lhs)
 			add_child(lhs);
@@ -467,7 +479,8 @@ public:
 	NExpression *assignmentExpr;
 	NVariableDeclaration(NType *type, NIdentifier *id) : type(type), id(id) { }
 	NVariableDeclaration(NType *type, NIdentifier *id, NExpression *assignmentExpr) : type(type), id(id), assignmentExpr(assignmentExpr) { }
-	virtual llvm::Value* codeGen(CodeGenContext& context);
+	llvm::Value* codeGen(CodeGenContext& context);
+	void GetIdRefs(IdList &list) { assignmentExpr->GetIdRefs(list); }
 	void print(ostream& os) { 
 		os << "Variable decl:\n"; 
 		sTabs++;
