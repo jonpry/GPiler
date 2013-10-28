@@ -1,0 +1,4 @@
+
+[double] : mapit([int32] input){
+	input :: map(x : x * 2) :: filter(x : x>0) :: map(x : x + 2.0) > return;
+}
