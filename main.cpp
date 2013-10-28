@@ -35,6 +35,7 @@ extern NBlock* programBlock;
 
 void createCoreFunctions(CodeGenContext& context);
 void compile(Module &mod);
+void split_unnatural(NBlock *pb);
 
 
 //This converts all array return types into function arguments. 
@@ -286,78 +287,7 @@ void remove_empty_decls(NBlock *pb){
 					it2 = decl->block->children.erase(it2);
 				}else
 					it2++;
-			
-		}
-	}
-}
-
-//TODO, rage
-bool isNatural(NExpression *expr, NFunctionDeclaration *decl);
-
-bool isNatural(NIdentifier *id, NFunctionDeclaration *decl){
-	for(VariableList::iterator it = decl->arguments->begin(); it != decl->arguments->end(); it++){
-		NVariableDeclaration *vdec = *it;
-		if(vdec->id->name.compare(id->name) == 0){
-			return true;
-		}
-	}
-
-	for(NodeList::iterator it = decl->block->children.begin(); it != decl->block->children.end(); it++){
-		NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it);
-		if(vdec && vdec->id->name.compare(id->name) == 0){
-			return isNatural(vdec->assignmentExpr,decl);	
-		}
-	}
-	
-	cout << "IsNatural failed\n";
-	exit(-1);
-	return true;
-}
-
-bool isNatural(NExpression* expr, NFunctionDeclaration *decl){
-	NMap* map = dynamic_cast<NMap*>(expr);
-	if(map){
-		if(!map->isNatural())
-			return false;
-		return isNatural(map->input,decl);
-	}
-
-	NIdentifier *id = dynamic_cast<NIdentifier*>(expr);
-	if(id){
-		return isNatural(id,decl);
-	}
-
-	cout << "IsNatural failed2\n";
-	cout << *expr;
-	exit(-1);
-	return true;
-}
-
-//this function requires conversion to strict SSA first, only elements are assignment for return and vardec's
-void split_unnatural(NBlock *pb){
-	NodeList::iterator it;
-	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
-		NFunctionDeclaration *decl = dynamic_cast<NFunctionDeclaration*> (*it);
-		if(decl && !decl->isGenerated){
-			ExpressionList naturals,unnaturals;
-
-			for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
-				bool natural=false;
-				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
-				if(vdec){
-					natural = isNatural(vdec->assignmentExpr,decl);
-				}
-				NAssignment *assn = dynamic_cast<NAssignment*>(*it2);
-				if(assn){
-					natural = isNatural(assn->rhs,decl);
-				}
-				if(natural)
-					naturals.push_back((NExpression*)*it2);
-				else
-					unnaturals.push_back((NExpression*)*it2);
 			}
-
-			cout << naturals.size() << ", " << unnaturals.size();
 		}
 	}
 }
@@ -488,11 +418,11 @@ int main(int argc, char **argv)
 
 	to_ssa(programBlock);
 	cout << "Pass6:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	split_unnatural(programBlock);
 	cout << "Pass7:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	rewrite_triads(programBlock);
 	cout << "Pass8:\n";

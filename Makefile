@@ -7,7 +7,8 @@ OBJS = 	parser.o \
 	corefn.o \
 	compile.o \
 	types.o \
-	runtime.o
+	runtime.o \
+	SplitFuncs.o
 
 CPPFLAGS = `llvm-config-3.4 --cppflags` -std=c++11
 LDFLAGS = `llvm-config-3.4 --ldflags`
