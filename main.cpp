@@ -394,43 +394,43 @@ int main(int argc, char **argv)
 	Runtime *runtime = new Runtime();
 
 	cout << "Raw:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	auto_name_returns(programBlock);
 	cout << "Pass1:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	rewrite_maps(programBlock);
 	cout << "Pass2:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	remove_array_temps(programBlock);
 	cout << "Pass3:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	rewrite_pipelines(programBlock);
 	cout << "Pass4:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	remove_empty_decls(programBlock);
 	cout << "Pass5:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	to_ssa(programBlock);
 	cout << "Pass6:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	split_unnatural(programBlock);
 	cout << "Pass7:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	rewrite_triads(programBlock);
 	cout << "Pass8:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	rewrite_argument_access(programBlock);
 	cout << "Pass9:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
 	// Passes below this point start losing too much context for building the runtime
@@ -438,7 +438,7 @@ int main(int argc, char **argv)
 
 	rewrite_arrays(programBlock);
 	cout << "Pass10:\n";
-	cout << *programBlock;
+//	cout << *programBlock;
 
 #if 1
 	CodeGenContext context;

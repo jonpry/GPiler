@@ -67,7 +67,7 @@ int isNatural(NExpression* expr, NFunctionDeclaration *decl){
 
 
 void split_unnatural(NFunctionDeclaration *decl){
-	ExpressionList naturals,unnaturals;
+	ExpressionList naturals,taints;
 
 	for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
 		int natural=NATURAL;
@@ -80,9 +80,9 @@ void split_unnatural(NFunctionDeclaration *decl){
 			natural = isNatural(assn->rhs,decl);
 		}
 		assert(vdec || assn);
-		//Put TAINTED into NATURAL's list
-		if(natural==UNNATURAL)
-			unnaturals.push_back((NExpression*)*it2);
+		//Store tainted values
+		if(natural==TAINTED)
+			taints.push_back((NExpression*)*it2);
 		else
 			naturals.push_back((NExpression*)*it2);
 	}
@@ -93,11 +93,14 @@ void split_unnatural(NFunctionDeclaration *decl){
 		cout << **it3 << ";\n";
 	}
 
-	cout << "Unnaturals\n";
+	cout << "Taints\n";
 
-	for(ExpressionList::iterator it3=unnaturals.begin(); it3!= unnaturals.end(); it3++){
+	for(ExpressionList::iterator it3=taints.begin(); it3!= taints.end(); it3++){
 		cout << **it3 << ";\n";
 	}
+
+	//TODO: store both taints and naturals in a function
+	 
 }
 
 //this function requires conversion to strict SSA first, only elements are assignment for return and vardec's
@@ -114,6 +117,7 @@ void split_unnatural(NBlock *pb){
 	for(it = kernels.begin(); it != kernels.end(); it++){
 		NFunctionDeclaration *decl =(NFunctionDeclaration*) (*it);
 		split_unnatural(decl);
+		NFunctionDeclaration *decl2 = (NFunctionDeclaration*)decl->clone();
 	}
 }
 

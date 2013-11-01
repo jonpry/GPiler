@@ -1,4 +1,5 @@
 
-[double] : mapit([int32] input){
-	input :: map(x : x * 2) :: filter(x : x>0) :: map(x : x + 2.0) > return;
+[double]ret1, [double]ret2 : mapit([int32] input, [int32] input2){
+	input :: map(x : x * 2) :: filter(x : x>0) :: map(x : x + 2.0) > ret1;
+	input2 :: map(x : x * 2) :: filter(x : x>0) :: map(x : x + 2.0) > ret2;
 }
