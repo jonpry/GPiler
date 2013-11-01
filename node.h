@@ -76,7 +76,7 @@ int isCmp(int op);
 class Node {
 public:
 	virtual ~Node() {}
-	virtual llvm::Value* codeGen(CodeGenContext& context) { }
+	virtual llvm::Value* codeGen(CodeGenContext& context) { return nullptr; }
 
 	NodeList children;
 	Node *parent;
@@ -104,8 +104,8 @@ public:
 class NExpression : public Node {
 public: 
 	void print(ostream& os) { os << "Unknown Expression: " <<  typeid(*this).name() << "\n"; }
-	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type: " <<  typeid(*this).name() << "\n"; }
-	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type2: " <<  typeid(*this).name() << "\n"; }
+	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type: " <<  typeid(*this).name() << "\n"; return GType(); }
+	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type2: " <<  typeid(*this).name() << "\n"; return GType(); }
 	virtual void GetIdRefs(IdList &list) { cout << "Unknown idref: " <<  typeid(*this).name() << "\n"; }
 };
 
@@ -132,6 +132,7 @@ public:
 	GType GetType(map<std::string, GType> &locals) { return GType(FLOAT_TYPE,64);}
 };
 
+// name for a variable or function which is unique in its scope.
 class NIdentifier : public NExpression {
 public:
 	std::string name;
@@ -149,7 +150,7 @@ public:
 	NExpression* expr;
 	string anon_name;
 
-	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), vars(vars), expr(expr), input(0) { 
+	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), input(0), vars(vars), expr(expr) { 
 		add_child(name);
 		for(IdList::iterator it = vars->begin(); it!=vars->end(); it++)
 			add_child(*it);
@@ -238,7 +239,7 @@ class NPipeLine : public NExpression {
 public:
 	NIdentifier *dest, *src;
 	MapList *chain;
-	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : src(src), chain(chain), dest(dest) {
+	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : dest(dest), src(src), chain(chain) {
 		add_child(dest);
 		add_child(src);
 		if(chain){
@@ -263,7 +264,7 @@ class NTriad : public NExpression {
 public:
 	NIdentifier *src,*dst;
 	NMap *map;
-	NTriad(NIdentifier *src, NMap *map, NIdentifier *dst) : src(src), map(map), dst(dst) {
+	NTriad(NIdentifier *src, NMap *map, NIdentifier *dst) : src(src), dst(dst), map(map) {
 		add_child(src);
 		add_child(dst);
 		add_child(map);
@@ -283,7 +284,7 @@ class NBinaryOperator : public NExpression {
 public:
 	int op;
 	NExpression *lhs, *rhs;
-	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : lhs(lhs), rhs(rhs), op(op) { 
+	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : op(op), lhs(lhs), rhs(rhs) { 
 		add_child(lhs);
 		add_child(rhs);
 	}
@@ -402,8 +403,8 @@ public:
 	NExpression *rhs;
 	NArrayRef *array;
 	int isReturn;
-	NAssignment(NIdentifier *lhs, NExpression *rhs) : array(0), lhs(lhs), rhs(rhs), isReturn(0) {init(); }
-	NAssignment(NArrayRef *array, NExpression *rhs) : array(array), lhs(0), rhs(rhs), isReturn(0) {init(); }
+	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs), array(0), isReturn(0) {init(); }
+	NAssignment(NArrayRef *array, NExpression *rhs) : lhs(0), rhs(rhs), array(array), isReturn(0) {init(); }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
@@ -476,6 +477,8 @@ public:
 			if(*found)
 				return ret;
 		}
+		cout << "Syntax error, could not find type of block:\n" << this << endl;
+		exit(-1);
 	}
 };
 
@@ -521,7 +524,7 @@ public:
 	NBlock *block;
 	int isGenerated;
 	NFunctionDeclaration(VariableList* returns, NIdentifier* id, VariableList* arguments, NBlock *block) :
-			returns(returns), id(id), arguments(arguments), block(block), isGenerated(0) { 
+			id(id), returns(returns), arguments(arguments), block(block), isGenerated(0) { 
 		add_child(id);
 		if(returns){
 			for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++)

@@ -88,7 +88,6 @@ context.pushBlock(bblock);
     toPrint->setName("toPrint");
     args.push_back(toPrint);
     
-CallInst *call = CallInst::Create(printfFn, makeArrayRef(args), "", bblock);
 ReturnInst::Create(getGlobalContext(), bblock);
 context.popBlock();
 }

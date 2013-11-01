@@ -47,7 +47,7 @@ void rewrite_arrays(NFunctionDeclaration *decl){
 		NVariableDeclaration *vdec = *it;
 //		cout << vdec << ", " << vdec->type << "\n";
 		if(vdec->type->isArray){
-			NType *old_type = vdec->type;
+			//NType *old_type = vdec->type;
 //			decl->SetType(new NType("void",0));	
 
 //			NVariableDeclaration *var = new NVariableDeclaration(old_type,new NIdentifier("return"),0);
@@ -272,11 +272,11 @@ void remove_empty_decls(NBlock *pb){
 				NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
 				if(vdec && !vdec->assignmentExpr){
 					//See if we can locate an assigment for it
-					bool found=false;
+					//bool found=false;
 					for(NodeList::iterator it3 = it2; it3 != decl->block->children.end(); it3++){
 						NAssignment *assn = dynamic_cast<NAssignment*>(*it3);
 						if(assn && vdec->id->name.compare(assn->lhs->name)==0){
-							found = true;
+							//found = true;
 							vdec->SetExpr(assn->rhs);
 							decl->block->children.insert(it3,vdec);
 							decl->block->children.erase(it3);
@@ -422,7 +422,7 @@ int main(int argc, char **argv)
 
 	split_unnatural(programBlock);
 	cout << "Pass7:\n";
-//	cout << *programBlock;
+	cout << *programBlock;
 
 	rewrite_triads(programBlock);
 	cout << "Pass8:\n";

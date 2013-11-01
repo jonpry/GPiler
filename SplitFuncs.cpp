@@ -79,6 +79,7 @@ void split_unnatural(NFunctionDeclaration *decl){
 		if(assn){
 			natural = isNatural(assn->rhs,decl);
 		}
+		assert(vdec || assn);
 		//Put TAINTED into NATURAL's list
 		if(natural==UNNATURAL)
 			unnaturals.push_back((NExpression*)*it2);
@@ -115,3 +116,4 @@ void split_unnatural(NBlock *pb){
 		split_unnatural(decl);
 	}
 }
+
