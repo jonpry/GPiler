@@ -89,13 +89,13 @@ void split_unnatural(NFunctionDeclaration *decl){
 	cout << "Naturals\n";
 
 	for(ExpressionList::iterator it3=naturals.begin(); it3!= naturals.end(); it3++){
-		cout << **it3;
+		cout << **it3 << ";\n";
 	}
 
 	cout << "Unnaturals\n";
 
 	for(ExpressionList::iterator it3=unnaturals.begin(); it3!= unnaturals.end(); it3++){
-		cout << **it3;
+		cout << **it3 << ";\n";
 	}
 }
 

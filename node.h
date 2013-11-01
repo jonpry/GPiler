@@ -84,8 +84,6 @@ public:
 	virtual void print(ostream& os) { os << "Unknown Node: " << typeid(*this).name() << "\n"; }
 	friend ostream& operator<<(ostream& os, Node &node)
 	{
-		for(int i=0; i < sTabs; i++)
-			os << "\t";
 	    	node.print(os);
     		return os;
 	}
@@ -121,7 +119,7 @@ public:
 	long long value;
 	NInteger(long long value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { os << "Integer: " << value << "\n"; }
+	void print(ostream& os) { os << value; }
 	GType GetType(map<std::string, GType> &locals) { return GType(INT_TYPE,32);}
 };
 
@@ -130,7 +128,7 @@ public:
 	double value;
 	NDouble(double value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { os << "Double: " << value << "\n"; }
+	void print(ostream& os) { os << value; }
 	GType GetType(map<std::string, GType> &locals) { return GType(FLOAT_TYPE,64);}
 };
 
@@ -139,7 +137,7 @@ public:
 	std::string name;
 	NIdentifier(const std::string& name) : name(name) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { os << "Identifier: " << name << "\n"; }
+	void print(ostream& os) { os << name; }
 	GType GetType(map<std::string, GType> &locals);
 	void GetIdRefs(IdList &list) { list.push_back(this); }
 };
@@ -160,17 +158,17 @@ public:
 
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
-		os << "Map:\n";
-		sTabs++;
-		os << *name;
+//		os << "Map:\n";
+//		sTabs++;
+		os << *name << "( ";
 		IdList::iterator it;
 		for(it = vars->begin(); it != vars->end(); it++){
-			os << ** it;
+			os << **it << ", ";
 		} 
-		os << *expr;
+		os << ": " << *expr << ")";
 		if(input)
-			os << *input;
-		sTabs--;
+			os << " < " << *input;
+//		sTabs--;
 	}
 
 	void SetInput(NIdentifier *in){
@@ -191,7 +189,13 @@ public:
 	int isArray;
 	NType(const std::string& name, int isArray) : NIdentifier(name), isArray(isArray) { }	
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
-	void print(ostream& os) { os << "Type: " << name << " " << isArray << "\n"; }
+	void print(ostream& os) { 
+		if(isArray)
+			os << "[";
+		os << name; 
+		if(isArray)
+			os << "]";
+	}
 	GType GetType(map<std::string, GType> &locals);
 };
 
@@ -219,13 +223,14 @@ public:
 	}
 
 	void print(ostream& os) { 
-		os << "MethodCall:\n";
-		sTabs++;
-		os << *id;
+//		os << "MethodCall:\n";
+//		sTabs++;
+		os << *id << "(";
 		ExpressionList::iterator it;
 		for(it = arguments->begin(); it!=arguments->end(); it++)
-			os << ** it;
-		sTabs--;
+			os << ** it << ", ";
+		os << ")";
+//		sTabs--;
 	}
 };
 
@@ -245,15 +250,12 @@ public:
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
-		os << "PipeLine:\n";
-		sTabs++;
 		os << *src;
-		os << *dest;
 		MapList::iterator it;
 		for(it = chain->begin(); it!=chain->end(); it++){
-			os << **it;
+			os << " :: " << **it;
 		}
-		sTabs--;
+		os << " > " << *dest;
 	}
 };
 
@@ -306,24 +308,25 @@ public:
 	}
 
 	void print(ostream& os) { 
-		os << "Binary Op: ";
+//		os << "Binary Op: ";
+		os << "(" << *lhs << " ";
+
 		switch(op){
-			case TPLUS:	os << "+\n"; break;
-			case TMINUS: 	os << "-\n"; break;
-			case TMUL:	os << "*\n"; break;
-			case TDIV:	os << "/\n"; break;
-			case TCGT:	os << ">\n"; break;
-			case TCLT:	os << "<\n"; break;
-			case TCGE:	os << ">=\n"; break;
-			case TCLE:	os << "<=\n"; break;
-			case TCNE:	os << "!=\n"; break;	
-			case TCEQ:	os << "==\n"; break;
-			default:	os << "unknown op: " << op << "\n"; break; 
+			case TPLUS:	os << "+"; break;
+			case TMINUS: 	os << "-"; break;
+			case TMUL:	os << "*"; break;
+			case TDIV:	os << "/"; break;
+			case TCGT:	os << ">"; break;
+			case TCLT:	os << "<"; break;
+			case TCGE:	os << ">="; break;
+			case TCLE:	os << "<="; break;
+			case TCNE:	os << "!="; break;	
+			case TCEQ:	os << "=="; break;
+			default:	os << "unknown op: " << op; break; 
 		}
-		sTabs++;
-		os << *lhs;
-		os << *rhs;
-		sTabs--;
+//		sTabs++;
+		os << " " << *rhs << ")";
+//		sTabs--;
 	}
 
 	GType GetType(map<std::string, GType> &locals);
@@ -385,11 +388,11 @@ public:
 	llvm::Value* store(CodeGenContext& context, llvm::Value* rhs);
 
 	void print(ostream& os) { 
-		os << "Array Ref:\n";
-		sTabs++;
-		os << *array;
-		os << *index;
-		sTabs--;
+//		os << "Array Ref:\n";
+//		sTabs++;
+		os << *array << "[" << *index << "]";
+//		os << *index;
+//		sTabs--;
 	}
 };
 
@@ -429,14 +432,15 @@ public:
 	}
 	void print(ostream& os) 
 	{ 
-		os << "Assignment: return: " << isReturn << "\n";
-		sTabs++;
+//		os << "Assignment: return: " << isReturn << "\n";
+//		sTabs++;
 		if(lhs)
 			os << *lhs;
 		else
 			os << *array;
+		os << " = ";
 		os << *rhs; 
-		sTabs--;
+//		sTabs--;
 	}
 
 	void SetArray(NArrayRef *ary){
@@ -455,12 +459,15 @@ public:
 	NBlock() { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
-		os << "Block: \n"; 
-		sTabs++;
+//		os << "Block: \n"; 
+//		sTabs++;
+
 		for(NodeList::iterator it = children.begin(); it!= children.end(); it++){
-			os << **it;
+			for(int i=0; i < sTabs; i++)
+				os << "\t";
+			os << **it << ";\n";
 		}
-		sTabs--;
+//		sTabs--;
 	}
 	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
 		NodeList::iterator it;
@@ -482,14 +489,14 @@ public:
 	llvm::Value* codeGen(CodeGenContext& context);
 	void GetIdRefs(IdList &list) { assignmentExpr->GetIdRefs(list); }
 	void print(ostream& os) { 
-		os << "Variable decl:\n"; 
-		sTabs++;
-		os << *type;
+//		os << "Variable decl:\n"; 
+//		sTabs++;
+		os << *type << " ";
 		if(id)
 			os << *id;
 		if(assignmentExpr)
-			os << *assignmentExpr;
-		sTabs--;
+			os << " = " << *assignmentExpr;
+//		sTabs--;
 	}
 
 	void SetType(NType* new_type){
@@ -528,16 +535,17 @@ public:
 	}
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
-		os << "Function decl:\n"; 
-		sTabs++;
-		os << *id;
 		VariableList::iterator it;
 		for(it = returns->begin(); it!=returns->end(); it++)
-			os << **it;
+			os << **it << ", ";
+		os << ":: " << *id << "(";
 		for(it = arguments->begin(); it!=arguments->end(); it++)
-			os << **it;
+			os << **it << ", ";
+      		os << ") {\n";
+		sTabs++;
 		os << *block;	
  		sTabs--;
+		os << "}\n";
 	}
 
 	void SetType(VariableList &new_types){
