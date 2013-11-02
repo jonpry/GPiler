@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 #include "node.h"
+#include "codegen.h"
 
 #define NATURAL 	0
 #define TAINTED 	1
@@ -64,8 +65,9 @@ int isNatural(NExpression* expr, NFunctionDeclaration *decl){
 }
 
 
-void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
+void split_unnatural(NFunctionDeclaration *decl, string base_name, int num_splits, FunctionList *split_funcs){
 	ExpressionList naturals,taints,unnaturals;
+	AssignmentList assignments;
 
 	for(NodeList::iterator it = decl->block->children.begin(); it != decl->block->children.end(); it++){
 		int natural=NATURAL;
@@ -85,6 +87,10 @@ void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
 			taints.push_back((NExpression*)*it);
 		else
 			unnaturals.push_back((NExpression*)*it);
+
+		if(assn && (natural != UNNATURAL)){
+			assignments.push_back(assn);
+		}
 	}
 
 #if 0
@@ -101,12 +107,15 @@ void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
 	}
 #endif
 	//Add the current function to the list of splits
+	char func_name[128];
+	sprintf(func_name,"%s.%d",base_name.c_str(),num_splits);
+	decl->id->name = func_name;
+
 	split_funcs->push_back(decl);
 
 	//For every tainted value, create a new function with that value as an argument, add all of the unnatural assignments
 	//and try to do some recursion
 	for(ExpressionList::iterator it=taints.begin(); it!= taints.end(); it++){
-		string func_name = "foo";
 		VariableList *args = new VariableList();
 		NVariableDeclaration *input = dynamic_cast<NVariableDeclaration*>(*it);
 		assert(input);
@@ -121,9 +130,9 @@ void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
 		}
 
 		
-		NFunctionDeclaration *new_func = new NFunctionDeclaration(0,new NIdentifier(func_name),args,block);
+		NFunctionDeclaration *new_func = new NFunctionDeclaration(0,new NIdentifier("foo"),args,block);
 
-		split_unnatural(new_func,split_funcs);
+		split_unnatural(new_func,base_name,num_splits+1,split_funcs);
 	}
 
 	//remove everything but taints and naturals from the current function
@@ -136,6 +145,64 @@ void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
 		for(ExpressionList::iterator it=taints.begin(); it!= taints.end(); it++){
 			decl->block->add_child(*it);
 		}
+	}
+
+
+	// Zonk the return type and rebuild it
+	decl->ClearReturns();
+	{
+		for(ExpressionList::iterator it=taints.begin(); it!= taints.end(); it++){
+			NVariableDeclaration *input = dynamic_cast<NVariableDeclaration*>(*it);
+			assert(input);
+			NVariableDeclaration *new_var = (NVariableDeclaration*)input->clone();
+			new_var->SetExpr(0);
+			decl->AddReturn(new_var);
+
+			//Replace the declaration with an assignment
+			NAssignment *assn = new NAssignment(input->id,input->assignmentExpr);
+			for(NodeList::iterator it2=decl->block->children.begin(); it2!=decl->block->children.end(); it2++){
+				if((*it2)==input){
+//					cout << "Found\n";
+					it2 = decl->block->children.erase(it2);
+					decl->block->children.insert(it2,assn);
+					break;
+				}
+			} 
+		}
+
+		for(AssignmentList::iterator it=assignments.begin(); it!= assignments.end(); it++){
+			NAssignment* assn = *it;
+			//TODO: fubar that we use (NIdentifier*)assn->rhs
+			NType* type = typeOf(decl,(NIdentifier*)assn->rhs,1);
+			type->isArray=1;
+			NVariableDeclaration *ret = new NVariableDeclaration(type,assn->lhs);
+			decl->AddReturn(ret);
+		}
+	}	
+}
+
+//TODO: we need a way to do this stuff that isn't specific to filter, probably through better support of multiple returns
+void expand_filter(NFunctionDeclaration *decl){
+	//Code assume that filter will be stuck in an NAssignment, which is true at time of writing
+	for(NodeList::iterator it = decl->block->children.begin(); it!=decl->block->children.end(); it++){
+		NAssignment *assn = dynamic_cast<NAssignment*>(*it);
+		if(!assn)
+			continue;
+		NMap* map = dynamic_cast<NMap*>(assn->rhs);
+		if(!map)
+			continue;
+		if(map->name->name.compare("filter")!=0)
+			continue;
+
+		//Found it
+		char new_name[128];
+		sprintf(new_name, "%s.pred", assn->lhs->name.c_str());
+		assn->rhs = map->input;
+		NAssignment *new_assn = new NAssignment(new NIdentifier(new_name),map);
+		decl->block->children.insert(it,new_assn);
+
+		NVariableDeclaration *new_decl = new NVariableDeclaration(new NType("bool",0), new NIdentifier(new_name));
+		decl->AddReturn(new_decl);
 	}
 }
 
@@ -154,9 +221,11 @@ void split_unnatural(NBlock *pb){
 		NFunctionDeclaration *decl =(NFunctionDeclaration*) (*it);
 		NFunctionDeclaration *cpy = (NFunctionDeclaration*)decl->clone();
 		FunctionList split_funcs;
-		split_unnatural(cpy,&split_funcs);
+		split_unnatural(cpy,decl->id->name,0,&split_funcs);
 
 		for(FunctionList::iterator it2 = split_funcs.begin(); it2!=split_funcs.end(); it2++){
+			//Some per function subpasses to do here
+			expand_filter(*it2);
 			cout << **it2;
 		}
 	}

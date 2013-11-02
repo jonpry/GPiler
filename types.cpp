@@ -78,11 +78,12 @@ NType* typeOf(NFunctionDeclaration *decl, NIdentifier *var, int allowArray){
 			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
 		}
 	}
-
-	for(VariableList::iterator it = decl->returns->begin(); it != decl->returns->end(); it++){
-		NVariableDeclaration *vdec = *it;
-		if(vdec->id->name.compare(var->name) == 0){
-			return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+	if(decl->returns){
+		for(VariableList::iterator it = decl->returns->begin(); it != decl->returns->end(); it++){	
+			NVariableDeclaration *vdec = *it;
+			if(vdec->id->name.compare(var->name) == 0){
+				return new NType(vdec->type->name,allowArray?vdec->type->isArray:0);
+			}
 		}
 	}
 

@@ -37,6 +37,7 @@ class NVariableDeclaration;
 class NPipeLine;
 class NMap;
 class NFunctionDeclaration;
+class NAssignment;
 
 #include "parser.hpp"
 
@@ -56,6 +57,7 @@ typedef list<NIdentifier*> IdList;
 typedef list<NMap*> MapList;
 typedef list<Node*> NodeList;
 typedef list<NFunctionDeclaration*> FunctionList;
+typedef list<NAssignment*> AssignmentList;
 
 #define INT_TYPE 1
 #define FLOAT_TYPE 2
@@ -501,7 +503,8 @@ public:
 	void add_all_children(){
 		if(lhs)
 			add_child(lhs);
-		add_child(rhs);
+		if(rhs)
+			add_child(rhs);
 		if(array)
 			add_child(array);
 	}
@@ -712,6 +715,13 @@ public:
 		add_child(var);
 	}
 
+	void AddReturn(NVariableDeclaration *decl){
+		if(!returns)
+			returns = new VariableList();
+		add_child(decl);
+		returns->push_back(decl);
+	}
+
 	int isScalar(){
 		for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++)
 			if((*it)->type->isArray)
@@ -724,6 +734,17 @@ public:
 
 	Node* clone(){
 		return new NFunctionDeclaration(*this);
+	}
+
+	void ClearReturns(){
+		if(!returns)
+			return;
+		for(VariableList::iterator it=returns->begin(); it!=returns->end(); it++){
+			children.remove(*it);
+		}
+		returns->clear();
+		delete returns;
+		returns = 0;
 	}
 };
 
