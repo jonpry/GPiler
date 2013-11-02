@@ -24,6 +24,50 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 using namespace std;
 
+///////////////////////NEW PLAN/////////////////////////////
+
+//TODO: Maybe move this into function member, taking std::string as argument
+bool varPresent(NFunctionDeclaration *decl, NVariableDeclaration *var){
+	for(VariableList::iterator it = decl->arguments->begin(); it != decl->arguments->end(); it++){
+		if((*it)->id->name.compare(var->id->name) == 0)
+			return true;
+	}
+
+	for(VariableList::iterator it = decl->returns->begin(); it != decl->returns->end(); it++){
+		if((*it)->id->name.compare(var->id->name) == 0)
+			return true;
+	}
+	return false;
+}
+
+void generate_runtime(NFunctionDeclaration* target, FunctionList *modules){
+	//Fix up the arguments so we get enough memory to do this
+	//TODO: try to free and reuse memory from a void typed pool by paying attention to when memory goes
+	//out of scope. potentially find optimal order of modules to minimize memory consumption
+	target->block->children.clear();
+	for(FunctionList::iterator it = modules->begin(); it!=modules->end(); it++){
+		NFunctionDeclaration *decl = *it;
+		for(VariableList::iterator it2 = decl->returns->begin(); it2 != decl->returns->end(); it2++){
+			NVariableDeclaration *var = *it2;
+			if(!varPresent(target,var)){
+				//Add it
+				NVariableDeclaration *new_var = (NVariableDeclaration*)var->clone();
+				//TODO: HACK!!
+				new_var->type->isArray = 1;
+				target->AddReturn(new_var);
+			}
+		}
+	}
+
+	//Add the modules to the function body
+	for(FunctionList::iterator it = modules->begin(); it!=modules->end(); it++){
+
+
+	}	
+}
+
+////////////////////////OLD PLAN////////////////////////////////////
+
 //TODO: this is real fugly for now. need a better way of defining input and output arrays
 RuntimeInst::RuntimeInst(NFunctionDeclaration* func){
 	name = func->id->name;

@@ -37,3 +37,5 @@ public:
 	map<string,RuntimeInst*> runtimes;
 };
 
+void generate_runtime(NFunctionDeclaration* target, FunctionList *modules);
+

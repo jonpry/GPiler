@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "node.h"
 #include "codegen.h"
+#include "runtime.h"
 
 #define NATURAL 	0
 #define TAINTED 	1
@@ -65,7 +66,7 @@ int isNatural(NExpression* expr, NFunctionDeclaration *decl){
 }
 
 
-void split_unnatural(NFunctionDeclaration *decl, string base_name, int num_splits, FunctionList *split_funcs){
+void split_unnatural_rcv(NFunctionDeclaration *decl, string base_name, int num_splits, FunctionList *split_funcs){
 	ExpressionList naturals,taints,unnaturals;
 	AssignmentList assignments;
 
@@ -132,7 +133,7 @@ void split_unnatural(NFunctionDeclaration *decl, string base_name, int num_split
 		
 		NFunctionDeclaration *new_func = new NFunctionDeclaration(0,new NIdentifier("foo"),args,block);
 
-		split_unnatural(new_func,base_name,num_splits+1,split_funcs);
+		split_unnatural_rcv(new_func,base_name,num_splits+1,split_funcs);
 	}
 
 	//remove everything but taints and naturals from the current function
@@ -181,6 +182,22 @@ void split_unnatural(NFunctionDeclaration *decl, string base_name, int num_split
 	}	
 }
 
+void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
+	//TODO: this function assumes that all input arrays can be of different size
+	//Maps of multiple inputs and such things may put restrictions on that allowing
+	//more code to be combined into modules
+
+	for(VariableList::iterator it=decl->arguments->begin(); it!=decl->arguments->end(); it++){
+		NFunctionDeclaration *new_decl = (NFunctionDeclaration*)decl->clone();
+		//cout << *new_decl;
+
+		new_decl->ClearArguments();
+		new_decl->AddArgument(*it);
+
+		split_unnatural_rcv(new_decl,decl->id->name,split_funcs->size(),split_funcs);
+	}
+}
+
 //TODO: we need a way to do this stuff that isn't specific to filter, probably through better support of multiple returns
 void expand_filter(NFunctionDeclaration *decl){
 	//Code assume that filter will be stuck in an NAssignment, which is true at time of writing
@@ -219,15 +236,21 @@ void split_unnatural(NBlock *pb){
 
 	for(it = kernels.begin(); it != kernels.end(); it++){
 		NFunctionDeclaration *decl =(NFunctionDeclaration*) (*it);
+		//TODO: for now we just copy the thing so the constructed runtime doesn't end up
+		//in programBlock until we are ready for it
+		decl = (NFunctionDeclaration*)decl->clone();
 		NFunctionDeclaration *cpy = (NFunctionDeclaration*)decl->clone();
 		FunctionList split_funcs;
-		split_unnatural(cpy,decl->id->name,0,&split_funcs);
+		split_unnatural(cpy,&split_funcs);
 
 		for(FunctionList::iterator it2 = split_funcs.begin(); it2!=split_funcs.end(); it2++){
 			//Some per function subpasses to do here
 			expand_filter(*it2);
 			cout << **it2;
 		}
+
+		generate_runtime(decl,&split_funcs);
+		cout << *decl;
 	}
 }
 

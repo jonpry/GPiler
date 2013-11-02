@@ -181,6 +181,8 @@ void rewrite_pipelines(NBlock *pb){
 
 						{
 							NFunctionDeclaration *anon_func = extract_func(pb,*it3, type);
+							//TODO: this kind of conditionally deals with types as a special case
+							//for filter, however it should really be done through multiple argument support
 							if(!isPredicate(*it3))
 								type = anon_func->returns->front()->type;
 							pb->add_child(pb->children.begin(), anon_func);

@@ -715,6 +715,13 @@ public:
 		add_child(var);
 	}
 
+	void AddArgument(NVariableDeclaration *decl){
+		if(!arguments)
+			arguments = new VariableList();
+		add_child(decl);
+		arguments->push_back(decl);
+	}
+
 	void AddReturn(NVariableDeclaration *decl){
 		if(!returns)
 			returns = new VariableList();
@@ -745,6 +752,18 @@ public:
 		returns->clear();
 		delete returns;
 		returns = 0;
+	}
+
+
+	void ClearArguments(){
+		if(!arguments)
+			return;
+		for(VariableList::iterator it=arguments->begin(); it!=arguments->end(); it++){
+			children.remove(*it);
+		}
+		arguments->clear();
+		delete arguments;
+		arguments = 0;
 	}
 };
 
