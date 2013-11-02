@@ -391,7 +391,7 @@ int main(int argc, char **argv)
 
 	auto_name_returns(programBlock);
 	cout << "Pass1:\n";
-	std::cout << *programBlock << endl;
+//	std::cout << *programBlock << endl;
 
 	remove_array_temps(programBlock);
 	cout << "Pass2:\n";

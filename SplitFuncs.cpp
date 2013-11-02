@@ -41,9 +41,7 @@ int isNatural(NIdentifier *id, NFunctionDeclaration *decl) {
 		}
 	}
 	
-	cout << "IsNatural failed\n";
-	exit(-1);
-	return -1;
+	return UNNATURAL;
 }
 
 int isNatural(NExpression* expr, NFunctionDeclaration *decl){
@@ -66,52 +64,79 @@ int isNatural(NExpression* expr, NFunctionDeclaration *decl){
 }
 
 
-void split_unnatural(NFunctionDeclaration *decl){
+void split_unnatural(NFunctionDeclaration *decl, FunctionList *split_funcs){
 	ExpressionList naturals,taints,unnaturals;
 
-	for(NodeList::iterator it2 = decl->block->children.begin(); it2 != decl->block->children.end(); it2++){
+	for(NodeList::iterator it = decl->block->children.begin(); it != decl->block->children.end(); it++){
 		int natural=NATURAL;
-		NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it2);
+		NVariableDeclaration *vdec = dynamic_cast<NVariableDeclaration*>(*it);
 		if(vdec){
 			natural = isNatural(vdec->assignmentExpr,decl);
 		}
-		NAssignment *assn = dynamic_cast<NAssignment*>(*it2);
+		NAssignment *assn = dynamic_cast<NAssignment*>(*it);
 		if(assn){
 			natural = isNatural(assn->rhs,decl);
 		}
 		assert(vdec || assn);
 		//Store tainted values, ignore UNNATURAL
 		if(natural==NATURAL)
-			naturals.push_back((NExpression*)*it2);
+			naturals.push_back((NExpression*)*it);
 		else if(natural==TAINTED)
-			taints.push_back((NExpression*)*it2);
+			taints.push_back((NExpression*)*it);
 		else
-			unnaturals.push_back((NExpression*)*it2);
+			unnaturals.push_back((NExpression*)*it);
 	}
 
+#if 0
 	cout << "Naturals\n";
 
-	for(ExpressionList::iterator it3=naturals.begin(); it3!= naturals.end(); it3++){
-		cout << **it3 << ";\n";
+	for(ExpressionList::iterator it=naturals.begin(); it!= naturals.end(); it++){
+		cout << **it << ";\n";
 	}
 
 	cout << "Taints\n";
 
-	for(ExpressionList::iterator it3=taints.begin(); it3!= taints.end(); it3++){
-		cout << **it3 << ";\n";
+	for(ExpressionList::iterator it=taints.begin(); it!= taints.end(); it++){
+		cout << **it << ";\n";
 	}
-
-	//TODO: store both taints and naturals in a function
+#endif
+	//Add the current function to the list of splits
+	split_funcs->push_back(decl);
 
 	//For every tainted value, create a new function with that value as an argument, add all of the unnatural assignments
 	//and try to do some recursion
-	for(ExpressionList::iterator it3=taints.begin(); it3!= taints.end(); it3++){
+	for(ExpressionList::iterator it=taints.begin(); it!= taints.end(); it++){
 		string func_name = "foo";
 		VariableList *args = new VariableList();
-		//args->push_back(
+		NVariableDeclaration *input = dynamic_cast<NVariableDeclaration*>(*it);
+		assert(input);
+		input = (NVariableDeclaration*)input->clone();
+		input->SetExpr(0);
+	
+		args->push_back(input);
 		NBlock *block = new NBlock();
+		
+		for(ExpressionList::iterator it2 = unnaturals.begin(); it2 != unnaturals.end(); it2++){
+			block->add_child((*it2)->clone());
+		}
+
+		
 		NFunctionDeclaration *new_func = new NFunctionDeclaration(0,new NIdentifier(func_name),args,block);
-	}	 
+
+		split_unnatural(new_func,split_funcs);
+	}
+
+	//remove everything but taints and naturals from the current function
+	{
+		decl->block->children.clear();
+		for(ExpressionList::iterator it=naturals.begin(); it!= naturals.end(); it++){
+			decl->block->add_child(*it);
+		}
+
+		for(ExpressionList::iterator it=taints.begin(); it!= taints.end(); it++){
+			decl->block->add_child(*it);
+		}
+	}
 }
 
 //this function requires conversion to strict SSA first, only elements are assignment for return and vardec's
@@ -127,7 +152,13 @@ void split_unnatural(NBlock *pb){
 
 	for(it = kernels.begin(); it != kernels.end(); it++){
 		NFunctionDeclaration *decl =(NFunctionDeclaration*) (*it);
-		split_unnatural(decl);
+		NFunctionDeclaration *cpy = (NFunctionDeclaration*)decl->clone();
+		FunctionList split_funcs;
+		split_unnatural(cpy,&split_funcs);
+
+		for(FunctionList::iterator it2 = split_funcs.begin(); it2!=split_funcs.end(); it2++){
+			cout << **it2;
+		}
 	}
 }
 

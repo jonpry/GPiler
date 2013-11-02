@@ -36,6 +36,7 @@ class NType;
 class NVariableDeclaration;
 class NPipeLine;
 class NMap;
+class NFunctionDeclaration;
 
 #include "parser.hpp"
 
@@ -54,6 +55,7 @@ typedef list<NVariableDeclaration*> VariableList;
 typedef list<NIdentifier*> IdList;
 typedef list<NMap*> MapList;
 typedef list<Node*> NodeList;
+typedef list<NFunctionDeclaration*> FunctionList;
 
 #define INT_TYPE 1
 #define FLOAT_TYPE 2
@@ -242,6 +244,8 @@ public:
 			os << "]";
 	}
 	GType GetType(map<std::string, GType> &locals);
+
+	Node* clone(){ return new NType(*this); }
 };
 
 class NMethodCall : public NExpression {
@@ -579,6 +583,7 @@ public:
 		id=0;
 		assignmentExpr=0;
 		type = (NType*)other.type->clone();
+		//cout << *type << ", " << *other.type << "\n";
 		if(other.id)
 			id = (NIdentifier*)other.id->clone();
 		if(other.assignmentExpr)
@@ -615,7 +620,8 @@ public:
 
 	void SetExpr(NExpression* expr){
 		children.remove(assignmentExpr);
-		add_child(expr);
+		if(expr)
+			add_child(expr);
 		assignmentExpr = expr;
 	}
 
@@ -675,8 +681,11 @@ public:
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
 		VariableList::iterator it;
-		for(it = returns->begin(); it!=returns->end(); it++)
-			os << **it << ", ";
+		if(returns){
+			for(it = returns->begin(); it!=returns->end(); it++)
+				os << **it << ", ";
+		}else
+			os << "void ";
 		os << ":: " << *id << "(";
 		for(it = arguments->begin(); it!=arguments->end(); it++)
 			os << **it << ", ";
