@@ -115,25 +115,6 @@ NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,NType* type) {
 	return anon_func;
 }
 
-void rewrite_maps(NBlock *pb) {
-	for(NodeList::iterator it = pb->children.begin(); it != pb->children.end(); it++) {
-		NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*> (*it);
-		if(func) {
-			for (NodeList::iterator it2 = func->block->children.begin(); it2 != func->block->children.end(); it2++) {
-				NPipeLine *pipeline = dynamic_cast<NPipeLine*> (*it2);
-				if (pipeline) {
-					NType* type = typeOf(func,pipeline->src,0);
-					for(MapList::iterator it3 = pipeline->chain->begin(); it3 != pipeline->chain->end(); it3++){
-						NFunctionDeclaration *anon_func = extract_func(pb,*it3, type);
-						type = anon_func->returns->front()->type;
-						pb->add_child(pb->children.begin(), anon_func);
-					}
-				}
-			}
-		}
-	}
-}
-
 //Array arguments are converted to pointers
 void rewrite_arrays(NBlock* programBlock){
 	NodeList::iterator it;
@@ -173,6 +154,12 @@ void remove_array_temps(NBlock* programBlock){
 	}
 }
 
+bool isPredicate(NMap* map){
+	if(map->name->name.compare("filter")==0)
+		return true;
+	return false;
+}
+
 void rewrite_pipelines(NBlock *pb){
 	NodeList::iterator it;
 	for(it = programBlock->children.begin(); it != programBlock->children.end(); it++){
@@ -191,8 +178,14 @@ void rewrite_pipelines(NBlock *pb){
 					for(it3 = pipe->chain->begin(); it3!= pipe->chain->end(); it3++){
 						NMap* map = *it3;
 						string new_name = create_temp_name();
-					
-						type = typeOf(map->anon_name,pb);
+
+						{
+							NFunctionDeclaration *anon_func = extract_func(pb,*it3, type);
+							if(!isPredicate(*it3))
+								type = anon_func->returns->front()->type;
+							pb->add_child(pb->children.begin(), anon_func);
+						}
+						
 						map->SetInput(new NIdentifier(temp_name));
 						NVariableDeclaration *map_dec = new NVariableDeclaration(type,new NIdentifier(new_name), map);
 						decl->block->children.insert(it2,map_dec);						
@@ -398,38 +391,34 @@ int main(int argc, char **argv)
 
 	auto_name_returns(programBlock);
 	cout << "Pass1:\n";
-//	std::cout << *programBlock << endl;
+	std::cout << *programBlock << endl;
 
-	rewrite_maps(programBlock);
+	remove_array_temps(programBlock);
 	cout << "Pass2:\n";
 //	std::cout << *programBlock << endl;
 
-	remove_array_temps(programBlock);
-	cout << "Pass3:\n";
-//	std::cout << *programBlock << endl;
-
 	rewrite_pipelines(programBlock);
-	cout << "Pass4:\n";
+	cout << "Pass3:\n";
 //	cout << *programBlock;
 
 	remove_empty_decls(programBlock);
-	cout << "Pass5:\n";
+	cout << "Pass4:\n";
 //	cout << *programBlock;
 
 	to_ssa(programBlock);
-	cout << "Pass6:\n";
+	cout << "Pass5:\n";
 //	cout << *programBlock;
 
 	split_unnatural(programBlock);
-	cout << "Pass7:\n";
+	cout << "Pass6:\n";
 //	cout << *programBlock;
 
 	rewrite_triads(programBlock);
-	cout << "Pass8:\n";
+	cout << "Pass7:\n";
 //	cout << *programBlock;
 
 	rewrite_argument_access(programBlock);
-	cout << "Pass9:\n";
+	cout << "Pass8:\n";
 //	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
@@ -437,7 +426,7 @@ int main(int argc, char **argv)
 	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass10:\n";
+	cout << "Pass9:\n";
 //	cout << *programBlock;
 
 #if 1
