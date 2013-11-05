@@ -1,11 +1,7 @@
 
-double foo : foo_func(double x, double y){
-	foo = x + y;
-}
-
 [double] xp, [double] yp, [double] zp : mapit([double] x, [double] y){
 	[double] temp;
 	x,y :: map(x,y : x + y, x + 1) > xp, temp;
 	temp :: map(x : x + 2) > yp;
-	temp,y :: map(x,y : foo_func(x,y)) > zp;
+	temp,y :: map(x,y : x + y) > zp;
 }
