@@ -1,0 +1,7 @@
+
+[double] xp, [double] yp, [double] zp : mapit([double] x, [double] y){
+	[double] temp;
+	x,y :: map(x,y : x + y, x + 1) > xp, temp;
+	temp :: map(x : x + 2) > yp;
+	temp,y :: map(x,y : x + y) > zp;
+}

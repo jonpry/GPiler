@@ -78,13 +78,17 @@ static Type *typeOf(const NType* type)
 		ret = PointerType::get(ret,1);//1 is global address space
 	}
 
+	if(type->isPointer){
+		ret = PointerType::get(ret,0);//Probably on stack
+	}
+
 	return ret;
 }
 
 static Type *typeOf(const NVariableDeclaration *decl){
 	if(!decl)
 		return Type::getVoidTy(getGlobalContext());
-	return typeOf(decl->type);
+	return typeOf(*decl->types->begin());
 }
 
 /* Returns an LLVM type based on GType */
@@ -136,6 +140,14 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 	return new LoadInst(context.locals()[name], "", false, context.currentBlock());
 }
 
+Value* NRef::codeGen(CodeGenContext& context){
+	cout << "Creating address reference\n";
+	if(context.locals().find(exp->name) == context.locals().end()){
+		cout << "Error\n";
+	}
+	return context.locals()[exp->name];
+}
+
 Value* NMethodCall::codeGen(CodeGenContext& context)
 {
 	Function *function = context.module->getFunction(id->name.c_str());
@@ -143,7 +155,7 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 		std::cerr << "no such function " << id->name << endl;	
 	}
 	std::vector<Value*> args;
-	ExpressionList::const_iterator it;
+	NodeList::const_iterator it;
 	for (it = arguments->begin(); it != arguments->end(); it++) {
 		args.push_back((**it).codeGen(context));
 	}
@@ -165,9 +177,9 @@ int isCmp(int op){
 	}
 }
 
-void Promote(Value **lhc, Value** rhc, NExpression *lhs, NExpression *rhs,CodeGenContext& context){
-	GType ltype = lhs->GetType(context.localTypes());
-	GType rtype = rhs->GetType(context.localTypes());
+void Promote(Value **lhc, Value** rhc, Node *lhs, Node *rhs,CodeGenContext& context){
+	GType ltype = *lhs->GetType(context.localTypes()).begin();
+	GType rtype = *rhs->GetType(context.localTypes()).begin();
 
 	*lhc = lhs->codeGen(context);
 	*rhc = rhs->codeGen(context);
@@ -191,8 +203,8 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 	Value *lhc, *rhc;
 
-	GType ltype = lhs->GetType(context.localTypes());
-	GType rtype = rhs->GetType(context.localTypes());
+	GType ltype = *lhs->GetType(context.localTypes()).begin();
+	GType rtype = *rhs->GetType(context.localTypes()).begin();
 
 	Promote(&lhc,&rhc,lhs,rhs,context);
 
@@ -261,7 +273,7 @@ Value* NSelect::codeGen(CodeGenContext& context)
 
 	Promote(&lhc,&rhc,yes,no,context);
 
-	GType ptype = pred->GetType(context.localTypes());
+	GType ptype = *pred->GetType(context.localTypes()).begin();
 	Value* predv = pred->codeGen(context);
 	if(ptype.type == INT_TYPE){
 		predv = new ICmpInst(*context.currentBlock(),CmpInst::Predicate::ICMP_NE,predv,GetIntZero());
@@ -275,17 +287,30 @@ Value* NSelect::codeGen(CodeGenContext& context)
 
 Value* NAssignment::codeGen(CodeGenContext& context)
 {
+	//TODO: this is probably all wrong to, but we must see how the tree is transformed
 	if(array){
 		return array->store(context,rhs->codeGen(context));
 	}
-	std::cout << "Creating assignment for " << lhs->name << endl;
-	if (context.locals().find(lhs->name) == context.locals().end()) {
-		std::cerr << "undeclared variable " << lhs->name << endl;
+	NIdentifier *id = *(lhs->begin());
+	std::cout << "Creating assignment for " << id->name << endl;
+
+	if (context.locals().find(id->name) == context.locals().end()) {
+		std::cerr << "undeclared variable " << id->name << endl;
+		exit(-1);
 		return NULL;
 	}
-	if(isReturn)
-		return ReturnInst::Create(getGlobalContext(), rhs->codeGen(context), context.currentBlock());
-	return new StoreInst(rhs->codeGen(context), context.locals()[lhs->name], false, context.currentBlock());
+	if(isReturn){
+		cout << "No returns!\n";
+		exit(-1);
+	}
+	Value* dst;
+	if((*(context.localTypes()[id->name]).begin()).isPointer){
+		cout << "Indirect assignment\n";
+		dst = new LoadInst(context.locals()[id->name], "", false, context.currentBlock());
+	}else{
+		dst = context.locals()[id->name];
+	}
+	return new StoreInst(rhs->codeGen(context), dst, false, context.currentBlock());
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -301,13 +326,15 @@ Value* NBlock::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	std::cout << "Creating variable declaration " << type->name << " " << id->name << endl;
-	AllocaInst *alloc = new AllocaInst(typeOf(type), id->name.c_str(), context.currentBlock());
+	std::cout << "Creating variable declaration " << (*types->begin())->name << " " << id->name << endl;
+	AllocaInst *alloc = new AllocaInst(typeOf(*types->begin()), id->name.c_str(), context.currentBlock());
 	context.locals()[id->name] = alloc;
-	context.localTypes()[id->name] = type->GetType(context.localTypes());
+	context.localTypes()[id->name] = GetType(context.localTypes());
 	//cout << context.locals()[id->name]->type.length;
 	if (assignmentExpr != NULL) {
-		NAssignment assn(id, assignmentExpr);
+		IdList *idlist = new IdList();
+		idlist->push_back(id);
+		NAssignment assn(idlist, assignmentExpr);
 		assn.codeGen(context);
 	}
 	return alloc;
@@ -315,7 +342,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 
 Value* NArrayRef::codeGen(CodeGenContext& context)
 {
-	std::cout << "Creating array reference " << array->name << " " << index->name << endl;
+	std::cout << "Creating array reference " << name << " " << index->name << endl;
 
 	/*std::map<std::string, Value*>::iterator it;
 	for(it = context.locals().begin(); it!= context.locals().end(); it++){
@@ -323,7 +350,7 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 	}*/
 
 	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
-	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[name], "", false, context.currentBlock());
 	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
@@ -331,10 +358,10 @@ Value* NArrayRef::codeGen(CodeGenContext& context)
 }
 
 Value* NArrayRef::store(CodeGenContext& context, Value* rhs){
-	std::cout << "Creating array store " << array->name << " " << index->name << endl;
+	std::cout << "Creating array store " << name << " " << index->name << endl;
 
 	Value* idx = new LoadInst(context.locals()[index->name], "", false, context.currentBlock());
-	Value* ptr = new LoadInst(context.locals()[array->name], "", false, context.currentBlock());
+	Value* ptr = new LoadInst(context.locals()[name], "", false, context.currentBlock());
 	Value* gep = GetElementPtrInst::Create(ptr, ArrayRef<Value*>(idx), "", context.currentBlock());
 	//cout << "Generated\n";
 //	Value* ld1 = new LoadInst(gep, "", false, context.currentBlock());
@@ -364,8 +391,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	vector<Type*> argTypes;
 	VariableList::const_iterator it;
 	for (it = arguments->begin(); it != arguments->end(); it++) {
-		argTypes.push_back(typeOf((**it).type));
-	}	
+		argTypes.push_back(typeOf(*(*it)->types->begin()));
+	}
 
 	FunctionType *ftype = FunctionType::get(typeOf(returns->front()), makeArrayRef(argTypes), false);
 	Function *function = Function::Create(ftype, isGenerated?GlobalValue::InternalLinkage:GlobalValue::ExternalLinkage, id->name.c_str(), context.module);

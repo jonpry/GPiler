@@ -61,8 +61,7 @@ void generate_runtime(NFunctionDeclaration* target, FunctionList *modules){
 
 	//Add the modules to the function body
 	for(FunctionList::iterator it = modules->begin(); it!=modules->end(); it++){
-
-
+		target->block->add_child(new NLoop(0));
 	}	
 }
 

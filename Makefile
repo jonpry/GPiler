@@ -4,11 +4,11 @@ OBJS = 	parser.o \
        	main.o \
        	tokens.o \
 	codegen.o \
-	corefn.o \
-	compile.o \
 	types.o \
-	runtime.o \
-	SplitFuncs.o
+	compile.o
+#	corefn.o \
+#	runtime.o \
+#	SplitFuncs.o
 
 CPPFLAGS = `llvm-config-3.4 --cppflags` -std=c++11 -Wall
 LDFLAGS = `llvm-config-3.4 --ldflags`

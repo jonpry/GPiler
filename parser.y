@@ -33,16 +33,14 @@ void yyerror(const char *s) { std::printf("Error: %d: %s at %s\n", yylineno,s,yy
 %union {
 	Node *node;
 	NBlock *block;
-	NExpression *expr;
-	NStatement *stmt;
 	NIdentifier *ident;
 	NType *type;
 	NMap *map;
 	NVariableDeclaration *var_decl;
 	std::list<NVariableDeclaration*> *varvec;
-	std::list<NExpression*> *exprvec;
 	std::list<NMap*> *pipevec;
-	std::list<NIdentifier*> *fvarvec;
+	std::list<Node*> *nodevec;
+	std::list<NIdentifier*> *idvec;
 	std::string *string;
 	int token;
 }
@@ -66,13 +64,13 @@ void yyerror(const char *s) { std::printf("Error: %d: %s at %s\n", yylineno,s,yy
 %type <ident> ident 
 
 %type <type> type
-%type <expr> numeric expr assignment func_call pipeline stmt var_decl func_decl_arg func_decl_ret
+%type <node> numeric expr assignment func_call pipeline stmt var_decl func_decl_arg func_decl_ret
 %type <varvec> func_decl_args func_decl_rets
-%type <exprvec> call_args
+%type <nodevec> expr_vec
 %type <pipevec> pipeline_chain
-%type <fvarvec> functional_vars
+%type <idvec> id_vec
 %type <block> program stmts block func_decls
-%type <stmt> func_decl 
+%type <node> func_decl 
 %type <map> map
 
 /* Operator precedence for mathematical operators */
@@ -89,12 +87,12 @@ void yyerror(const char *s) { std::printf("Error: %d: %s at %s\n", yylineno,s,yy
 program : func_decls { programBlock = $1; }
 	;
 
-func_decls : func_decl { $$ = new NBlock(); $$->children.push_back($<stmt>1); }
-	| func_decls func_decl { $1->children.push_back($<stmt>2); }
+func_decls : func_decl { $$ = new NBlock(); $$->children.push_back($1); }
+	| func_decls func_decl { $1->children.push_back($2); }
 	;
 
-stmts : stmt { $$ = new NBlock(); $$->children.push_back($<expr>1); }
-	| stmts stmt { $1->children.push_back($<expr>2); }
+stmts : stmt { $$ = new NBlock(); $$->children.push_back($1); }
+	| stmts stmt { $1->children.push_back($2); }
 	;
 
 stmt : var_decl TSEMI
@@ -103,34 +101,33 @@ stmt : var_decl TSEMI
 	| pipeline TSEMI 
      	;
 
-pipeline : ident TDCOLON pipeline_chain TCGT ident {$$ = new NPipeLine($1,$5,$3); }
+pipeline : id_vec TDCOLON pipeline_chain TCGT id_vec {$$ = new NPipeLine($1,$5,$3); }
 	;
 
 pipeline_chain: map { $$ = new MapList(); $$->push_back($1); } 
 	| pipeline_chain TDCOLON map { $1->push_back($3); }
 	;
 
-functional_vars: ident { $$ = new IdList(); $$->push_back($1); }
-	| functional_vars TCOMMA ident { $1->push_back($3); }
+id_vec: ident { $$ = new IdList(); $$->push_back($1); }
+	| id_vec TCOMMA ident { $1->push_back($3); }
 	;
 	
-
-map : ident TLPAREN functional_vars TCOLON expr TRPAREN { $$ = new NMap($1,$3,$5); }
+map : ident TLPAREN id_vec TCOLON expr_vec TRPAREN { $$ = new NMap($1,$3,$5); }
 	;
 
 block : TLBRACE stmts TRBRACE { $$ = $2; }
 	| TLBRACE TRBRACE { $$ = new NBlock(); }
 	;
 
-var_decl : type ident { $$ = new NVariableDeclaration($1, $2); }
-	| type ident TEQUAL expr { $$ = new NVariableDeclaration($1, $2, $4); }
+var_decl : type ident { $$ = new NVariableDeclaration(new TypeList{$1}, $2); }
+	| type ident TEQUAL expr { $$ = new NVariableDeclaration(new TypeList{$1}, $2, $4); }
 	;
 
-func_decl_arg : type ident { $$ = new NVariableDeclaration($1, $2); }
+func_decl_arg : type ident { $$ = new NVariableDeclaration(new TypeList{$1}, $2); }
 	;
 
-func_decl_ret : type ident { $$ = new NVariableDeclaration($1, $2); }
-	| type  { $$ = new NVariableDeclaration($1, 0); }
+func_decl_ret : type ident { $$ = new NVariableDeclaration(new TypeList{$1}, $2); }
+	| type  { $$ = new NVariableDeclaration(new TypeList{$1}, 0); }
 	;
  
 func_decl : func_decl_rets TCOLON ident TLPAREN func_decl_args TRPAREN block
@@ -158,7 +155,7 @@ numeric : TINTEGER { $$ = new NInteger(atol($1->c_str())); delete $1; }
 	| TDOUBLE { $$ = new NDouble(atof($1->c_str())); delete $1; }
 	;
 
-assignment : ident TEQUAL expr { $$ = new NAssignment($<ident>1, $3); }
+assignment : id_vec TEQUAL expr { $$ = new NAssignment($1, $3); }
 
 expr :  ident { $<ident>$ = $1; }
 	| numeric
@@ -181,12 +178,12 @@ expr :  ident { $<ident>$ = $1; }
 	| func_call
 	;
 
-func_call : ident TLPAREN call_args TRPAREN { $$ = new NMethodCall($1, $3); }
+func_call : ident TLPAREN expr_vec TRPAREN { $$ = new NMethodCall($1, $3); }
 	;
 
-call_args : /*blank*/ { $$ = new ExpressionList(); }
-	| expr { $$ = new ExpressionList(); $$->push_back($1); }
-	| call_args TCOMMA expr { $1->push_back($3); }
+expr_vec : /*blank*/ { $$ = new NodeList(); }
+	| expr { $$ = new NodeList(); $$->push_back($1); }
+	| expr_vec TCOMMA expr { $1->push_back($3); }
 	;
 
 %%

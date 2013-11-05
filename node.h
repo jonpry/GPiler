@@ -29,8 +29,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class Node;
 class NBlock;
-class NExpression;
-class NStatement;
 class NIdentifier;
 class NType;
 class NVariableDeclaration;
@@ -46,35 +44,35 @@ class NAssignment;
 using namespace std;
 
 class CodeGenContext;
-class NStatement;
-class NExpression;
 class NVariableDeclaration;
-
-typedef list<NStatement*> StatementList;
-typedef list<NExpression*> ExpressionList;
-typedef list<NVariableDeclaration*> VariableList;
-typedef list<NIdentifier*> IdList;
-typedef list<NMap*> MapList;
-typedef list<Node*> NodeList;
-typedef list<NFunctionDeclaration*> FunctionList;
-typedef list<NAssignment*> AssignmentList;
-
-#define INT_TYPE 1
-#define FLOAT_TYPE 2
-#define BOOL_TYPE 3
-#define VOID_TYPE 4
 
 struct GType {
 	int type;
 	int length;
-	GType(int type, int length) : type(type), length(length) {}
+	int isArray;
+	int isPointer;
+	GType(int type, int length, int array) : type(type), length(length), isArray(array), isPointer(0) {}
 	GType(){}
 
 	void print();
 	NType* toNode();
 }; 
 
-GType promoteType(GType ltype, GType rtype);
+typedef list<NVariableDeclaration*> VariableList;
+typedef list<NIdentifier*> IdList;
+typedef list<NMap*> MapList;
+typedef list<Node*> NodeList;
+typedef list<NFunctionDeclaration*> FunctionList;
+typedef list<NAssignment*> AssignmentList;
+typedef list<NType*> TypeList;
+typedef list<GType> GTypeList;
+
+#define INT_TYPE 1
+#define FLOAT_TYPE 2
+#define BOOL_TYPE 3
+#define VOID_TYPE 4
+
+GTypeList promoteType(GTypeList ltype, GTypeList rtype);
 int isCmp(int op);
 
 class Node {
@@ -85,12 +83,19 @@ public:
 		//None of Node members are valid in deep copy, so do nothing
 	}	
 	virtual ~Node() {}
-	virtual llvm::Value* codeGen(CodeGenContext& context) { return nullptr; }
+	virtual llvm::Value* codeGen(CodeGenContext& context) { 
+		cout << "Unknown Codegen: " << typeid(*this).name() << "\n";
+		exit(-1);
+	}
 
 	NodeList children;
 	Node *parent;
 
-	virtual void print(ostream& os) { os << "Unknown Node: " << typeid(*this).name() << "\n"; }
+	virtual void print(ostream& os) { 
+		os << "Unknown Node: " << typeid(*this).name() << "\n"; 
+		exit(-1);
+	}
+
 	friend ostream& operator<<(ostream& os, Node &node)
 	{
 	    	node.print(os);
@@ -107,70 +112,115 @@ public:
 		c->parent = this;
 	}
 
+	void add_node_list(NodeList *exprs){
+		if(!exprs)
+			return;
+		for(NodeList::iterator it = exprs->begin(); it != exprs->end(); it++){
+			add_child((Node*)*it);
+		}
+	}
+
+	void add_id_list(IdList *ids){
+		if(!ids)
+			return;
+		for(IdList::iterator it = ids->begin(); it != ids->end(); it++){
+			add_child((Node*)*it);
+		}
+	}
+
+	void add_map_list(MapList *maps){
+		if(!maps)
+			return;
+		for(MapList::iterator it = maps->begin(); it != maps->end(); it++){
+			add_child((Node*)*it);
+		}
+	}
+
 	virtual Node* clone() { cout << "Unknown clone: " << typeid(*this).name() << "\n"; return 0; }
+
+	virtual GTypeList GetType(map<std::string, GTypeList> &locals) { 
+		cout << "Unknown type: " <<  typeid(*this).name() << "\n"; 
+		exit(-1);
+		return GTypeList(); 
+	}
+	virtual GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptypes, int* found, Node* exp) { 
+		cout << "Unknown type2: " <<  typeid(*this).name() << "\n";
+		exit(-1); 
+		return GTypeList(); 
+	}
+
+	virtual GTypeList GetType(){
+		map<std::string, GTypeList> locals;
+		return GetType(locals);
+	}
+
+	virtual void GetIdRefs(IdList &list) { 
+		cout << "Unknown idref: " <<  typeid(*this).name() << "\n"; 
+		exit(-1);
+	}
 
 	static int sTabs;  
 };
 
-class NExpression : public Node {
-public: 
-	void print(ostream& os) { os << "Unknown Expression: " <<  typeid(*this).name() << "\n"; }
-	virtual GType GetType(map<std::string, GType> &locals) { cout << "Unknown type: " <<  typeid(*this).name() << "\n"; return GType(); }
-	virtual GType GetType(map<std::string, GType> &locals, GType* ptype, int* found, NExpression* exp) { cout << "Unknown type2: " <<  typeid(*this).name() << "\n"; return GType(); }
-	virtual void GetIdRefs(IdList &list) { cout << "Unknown idref: " <<  typeid(*this).name() << "\n"; }
-};
-
-class NStatement : public Node {
-public: 
-	void print(ostream& os) { os << "Unknown Statement: " <<  typeid(*this).name() << "\n"; }
-};
-
-class NInteger : public NExpression {
+class NInteger : public Node {
 public:
 	long long value;
 	NInteger(long long value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << value; }
-	GType GetType(map<std::string, GType> &locals) { return GType(INT_TYPE,32);}
+	GTypeList GetType(map<std::string, GTypeList> &locals) { return GTypeList{GType(INT_TYPE,32,0)};}
 
 	Node* clone() { return new NInteger(*this); }
 };
 
-class NDouble : public NExpression {
+class NDouble : public Node {
 public:
 	double value;
 	NDouble(double value) : value(value) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << value; }
-	GType GetType(map<std::string, GType> &locals) { return GType(FLOAT_TYPE,64);}
+	GTypeList GetType(map<std::string, GTypeList> &locals) { return GTypeList{GType(FLOAT_TYPE,64,0)};}
 
 	Node* clone() { return new NDouble(*this); }
 };
 
 // name for a variable or function which is unique in its scope.
-class NIdentifier : public NExpression {
+class NIdentifier : public Node {
 public:
 	std::string name;
 	NIdentifier(const std::string& name) : name(name) { }
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { os << name; }
-	GType GetType(map<std::string, GType> &locals);
+	GTypeList GetType(map<std::string, GTypeList> &locals);
 	void GetIdRefs(IdList &list) { list.push_back(this); }
 
 	Node* clone(){
 		return new NIdentifier(*this);
 	}
+
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptype, int *found, Node* exp) { 
+		if(exp==this){
+			*ptype = GetType(locals);
+			*found=1;
+			return *ptype;
+		}
+		return GetType(locals);
+	}
 };
 
-class NMap : public NExpression {
+class NMap : public Node {
 public:
 	NIdentifier* name, *input;
 	IdList *vars;
-	NExpression* expr;
+	NodeList* exprs;
 	string anon_name;
 
-	NMap(NIdentifier* name, IdList *vars, NExpression *expr) : name(name), input(0), vars(vars), expr(expr) { 
+	NMap(NIdentifier* name, IdList *vars, NodeList *exprs) : name(name), input(0), vars(vars), exprs(exprs) { 
 		add_all_children();
+	}
+	~NMap(){
+		delete vars;
+		delete exprs;
 	}
 
 	void add_all_children(){
@@ -178,21 +228,24 @@ public:
 			add_child(name);
 		if(input)
 			add_child(input);
-		for(IdList::iterator it = vars->begin(); it!=vars->end(); it++)
-			add_child(*it);
-		add_child(expr);
+		add_id_list(vars);
+		add_node_list(exprs);
 	}
 
 	//Copy constructor
 	NMap(const NMap &other){
-		name = 0; input = 0; vars = 0; expr = 0;
+		name = 0; input = 0; vars = 0; exprs = 0;
 		anon_name = other.anon_name;
 		if(other.name)
 			name = (NIdentifier*)other.name->clone();
 		if(other.input)
 			input = (NIdentifier*)other.input->clone();
-		if(other.expr)
-			expr = (NExpression*)other.expr->clone();
+		if(other.exprs){
+			exprs = new NodeList();
+			for(NodeList::iterator it = other.exprs->begin(); it!=other.exprs->end(); it++){
+				exprs->push_back((Node*)(*it)->clone());
+			}
+		}
 		if(other.vars){
 			vars = new IdList();
 			for(IdList::iterator it = other.vars->begin(); it!= other.vars->end(); it++){
@@ -211,8 +264,13 @@ public:
 		IdList::iterator it;
 		for(it = vars->begin(); it != vars->end(); it++){
 			os << **it << ", ";
-		} 
-		os << ": " << *expr << ")";
+		}
+		os << ": ";
+		for(NodeList::iterator it = exprs->begin(); it!=exprs->end(); it++){ 	
+			os << **it << ", ";
+		}
+		os << ")";
+		
 		if(input)
 			os << " < " << *input;
 //		sTabs--;
@@ -236,39 +294,42 @@ public:
 class NType: public NIdentifier {
 public:
 	int isArray;
-	NType(const std::string& name, int isArray) : NIdentifier(name), isArray(isArray) { }	
+	int isPointer;
+	NType(const std::string& name, int isArray) : NIdentifier(name), isArray(isArray), isPointer(0) { }	
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 	void print(ostream& os) { 
+		if(isPointer)
+			os << "*";
 		if(isArray)
 			os << "[";
 		os << name; 
 		if(isArray)
 			os << "]";
 	}
-	GType GetType(map<std::string, GType> &locals);
+	GTypeList GetType(map<std::string, GTypeList> &locals);
 
 	Node* clone(){ return new NType(*this); }
 };
 
-class NMethodCall : public NExpression {
+class NMethodCall : public Node {
 public:
 	NIdentifier* id;
-	ExpressionList* arguments;
-	NMethodCall(NIdentifier *id, ExpressionList* arguments) : id(id), arguments(arguments) { 
+	NodeList* arguments;
+	NMethodCall(NIdentifier *id, NodeList* arguments) : id(id), arguments(arguments) { 
 		add_child(id);
-		if(arguments){
-			for(ExpressionList::iterator it = arguments->begin(); it != arguments->end(); it++){
-				add_child(*it);
-			}
-		}
+		add_node_list(arguments);
 	}
 	NMethodCall(NIdentifier *id) : id(id) {
 		add_child(id);
 	}
+	~NMethodCall() {
+		delete arguments;
+	}
+
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void GetIdRefs(IdList &list) { 
-		for(ExpressionList::iterator it = arguments->begin(); it!= arguments->end(); it++){
+		for(NodeList::iterator it = arguments->begin(); it!= arguments->end(); it++){
 			(*it)->GetIdRefs(list);
 		}
 	}
@@ -277,7 +338,7 @@ public:
 //		os << "MethodCall:\n";
 //		sTabs++;
 		os << *id << "(";
-		ExpressionList::iterator it;
+		NodeList::iterator it;
 		for(it = arguments->begin(); it!=arguments->end(); it++)
 			os << ** it << ", ";
 		os << ")";
@@ -285,63 +346,81 @@ public:
 	}
 };
 
-class NPipeLine : public NExpression {
+class NZip : public Node {
 public:
-	NIdentifier *dest, *src;
+	IdList *src;
+	NZip(IdList *src) : src(src) { }
+
+	void print(ostream& os) { 
+		os << "zip(";
+		IdList::iterator it;
+		for(it = src->begin(); it!=src->end(); it++)
+			os << ** it << ", ";
+		os << ") ";
+	}
+
+	void GetIdRefs(IdList &list) { copy(src->begin(), src->end(), back_inserter(list)); }
+};
+
+class NRef: public Node {
+public:
+	NIdentifier* exp;
+	NRef(NIdentifier* exp) : exp(exp) {
+		add_child(exp);
+	}
+
+	void print(ostream& os){
+		os << "&" << *exp;
+	}
+
+	virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NPipeLine : public Node {
+public:
+	IdList *dest, *src;
 	MapList *chain;
-	NPipeLine(NIdentifier *src, NIdentifier *dest, MapList *chain) : dest(dest), src(src), chain(chain) {
-		add_child(dest);
-		add_child(src);
-		if(chain){
-			for(MapList::iterator it = chain->begin(); it!=chain->end(); it++){
-				add_child(*it);
-			}
-		}
+	NPipeLine(IdList *src, IdList *dest, MapList *chain) : dest(dest), src(src), chain(chain) {
+		add_id_list(src);
+		add_id_list(dest);
+		add_map_list(chain);
  	}
+	~NPipeLine(){
+		delete chain;
+		delete dest;
+		delete src;
+	}
+
 //	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 	void print(ostream& os) { 
-		os << *src;
-		MapList::iterator it;
-		for(it = chain->begin(); it!=chain->end(); it++){
+		for(IdList::iterator it = src->begin(); it!=src->end(); it++){
+			os << **it << ", ";
+		}
+		for(MapList::iterator it = chain->begin(); it!=chain->end(); it++){
 			os << " :: " << **it;
 		}
-		os << " > " << *dest;
+		os << " > ";
+
+		for(IdList::iterator it = dest->begin(); it!=dest->end(); it++){
+			os << **it << ", ";
+		}
+
 	}
 };
 
-class NTriad : public NExpression {
-public:
-	NIdentifier *src,*dst;
-	NMap *map;
-	NTriad(NIdentifier *src, NMap *map, NIdentifier *dst) : src(src), dst(dst), map(map) {
-		add_child(src);
-		add_child(dst);
-		add_child(map);
-	}
-
-	void print(ostream& os) { 
-		os << "Triad:\n";
-		sTabs++;
-		os << *src;
-		os << *dst;
-		os << *map;
-		sTabs--;
-	}
-};
-
-class NBinaryOperator : public NExpression {
+class NBinaryOperator : public Node {
 public:
 	int op;
-	NExpression *lhs, *rhs;
-	NBinaryOperator(NExpression *lhs, int op, NExpression *rhs) : op(op), lhs(lhs), rhs(rhs) { 
+	Node *lhs, *rhs;
+	NBinaryOperator(Node *lhs, int op, Node *rhs) : op(op), lhs(lhs), rhs(rhs) { 
 		add_all_children();
 	}
 	//Copy constructor
 	NBinaryOperator(const NBinaryOperator &other){
 		op = other.op;
-		lhs = (NExpression*)other.lhs->clone();
-		rhs = (NExpression*)other.rhs->clone();
+		lhs = other.lhs->clone();
+		rhs = other.rhs->clone();
 		add_all_children();
 	}
 
@@ -352,14 +431,14 @@ public:
 
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
-	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptype, int *found, Node* exp) { 
 		if(exp==this){
 			*ptype = GetType(locals);
 			*found=1;
 			return *ptype;
 		}
 
-		GType ret = rhs->GetType(locals,ptype,found,exp);
+		GTypeList ret = rhs->GetType(locals,ptype,found,exp);
 		if(*found)
 			return ret;
 
@@ -392,15 +471,15 @@ public:
 //		sTabs--;
 	}
 
-	GType GetType(map<std::string, GType> &locals);
+	GTypeList GetType(map<std::string, GTypeList> &locals);
 
 	Node* clone(){ return new NBinaryOperator(*this); }
 };
 
-class NSelect : public NExpression {
+class NSelect : public Node {
 public:
-	NExpression *pred, *yes, *no;
-	NSelect(NExpression *pred, NExpression *yes, NExpression *no) : pred(pred), yes(yes), no(no) { 
+	Node *pred, *yes, *no;
+	NSelect(Node *pred, Node *yes, Node *no) : pred(pred), yes(yes), no(no) { 
 		add_child(pred);
 		add_child(yes);
 		add_child(no);
@@ -408,14 +487,14 @@ public:
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
 
-	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptype, int *found, Node* exp) { 
 		if(exp==this){
 			*ptype = GetType(locals);
 			*found=1;
 			return *ptype;
 		}
 
-		GType ret = yes->GetType(locals,ptype,found,exp);
+		GTypeList ret = yes->GetType(locals,ptype,found,exp);
 		if(*found)
 			return ret;
 
@@ -430,7 +509,7 @@ public:
 		return GetType(locals);	
 	}
 
-	GType GetType(map<std::string, GType> &locals);
+	GTypeList GetType(map<std::string, GTypeList> &locals);
 
 	void print(ostream& os) { 
 		os << "Select:\n";
@@ -442,99 +521,130 @@ public:
 	}
 };
 
-class NArrayRef : public NExpression {
+class NArrayRef : public NIdentifier {
 public:
-	NIdentifier *array, *index;
-	NArrayRef(NIdentifier *array, NIdentifier *index) : array(array), index(index) { 
-		add_child(array);
+	NIdentifier *index;
+	NArrayRef(NIdentifier *array, NIdentifier *index) : NIdentifier(*array), index(index) { 
 		add_child(index);
 	}
+	//Copy constructor
+	NArrayRef(const NArrayRef &other) : NIdentifier(other) {
+		index = (NIdentifier*)other.index->clone();
+	}
+
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 	llvm::Value* store(CodeGenContext& context, llvm::Value* rhs);
 
 	void print(ostream& os) { 
-//		os << "Array Ref:\n";
-//		sTabs++;
-		os << *array << "[" << *index << "]";
-//		os << *index;
-//		sTabs--;
+		os << name << "[" << *index << "]";
+	}
+
+	Node* clone(){
+		return new NArrayRef(*this);
 	}
 };
 
-class NAssignment : public NExpression {
+class NAssignment : public Node {
 public:
-	NIdentifier *lhs;
-	NExpression *rhs;
+	IdList *lhs;
+	Node *rhs;
 	NArrayRef *array;
 	int isReturn;
-	NAssignment(NIdentifier *lhs, NExpression *rhs) : lhs(lhs), rhs(rhs), array(0), isReturn(0) {add_all_children(); }
-	NAssignment(NArrayRef *array, NExpression *rhs) : lhs(0), rhs(rhs), array(array), isReturn(0) {add_all_children(); }
+	NAssignment(IdList *lhs, Node *rhs) : lhs(lhs), rhs(rhs), array(0), isReturn(0) {add_all_children(); }
 	//Copy constructor
 	NAssignment(const NAssignment &other){
 		isReturn = other.isReturn;
-		lhs = 0; rhs = 0; array = 0;
-		if(other.lhs)
-			lhs = (NIdentifier*)other.lhs->clone();
+		lhs = 0; rhs = 0;
+		if(other.lhs){
+			lhs = new IdList();
+			for(IdList::iterator it = other.lhs->begin(); it != other.lhs->end(); it++){
+				lhs->push_back((NIdentifier*)(*it)->clone());
+			}
+		}
 		if(other.rhs)
-			rhs = (NExpression*)other.rhs->clone();
-		if(other.array)
-			array = (NArrayRef*)other.array->clone();
+			rhs = other.rhs->clone();
+	}
+	~NAssignment(){
+		delete lhs;
 	}
 
 	virtual llvm::Value* codeGen(CodeGenContext& context);
 
-	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptype, int *found, Node* exp) { 
 		if(exp==this){
 			*ptype = rhs->GetType(locals);
 			*found=1;
 			return *ptype;
 		}
 
-		GType ret = rhs->GetType(locals,ptype,found,exp);
+		GTypeList ret = rhs->GetType(locals,ptype,found,exp);
 		if(*found)
 			return ret;
 
-		locals[lhs->name] = ret;
+		{
+			//TODO: assignment destination can be scalar with vector expression
+			if(lhs->size() == 1){
+				locals[(*lhs->begin())->name] = ret;
+			}else{
+				IdList::iterator it;
+				GTypeList::iterator it2;
+				for(it = lhs->begin(), it2 = ret.begin(); it != lhs->end() && it2 != ret.end(); it++, it2++)
+					locals[(*it)->name] = GTypeList{*it2};
+				if(it!=lhs->end() || it2 != ret.end()){
+					cout << "Assignment vector length mismatch!\n";
+					exit(-1);
+				}
+			}
+		}
 		return ret;	
 	}
 
 	void GetIdRefs(IdList &list) { rhs->GetIdRefs(list); }
 
 	void add_all_children(){
-		if(lhs)
-			add_child(lhs);
+		add_id_list(lhs);
 		if(rhs)
 			add_child(rhs);
-		if(array)
-			add_child(array);
 	}
+
+	void SetExpr(Node *node){
+		children.remove(rhs);
+		add_child(node);
+		rhs = node;
+	}
+
+	void SetArray(NArrayRef *in){
+		array = in;
+		add_child(in);
+		if(lhs){
+			for(IdList::iterator it=lhs->begin(); it!=lhs->end(); it++){
+				children.remove(*it);
+			}
+			delete lhs;
+			lhs = 0;
+		}
+	}
+
 	void print(ostream& os) 
 	{ 
 //		os << "Assignment: return: " << isReturn << "\n";
 //		sTabs++;
-		if(lhs)
-			os << *lhs;
-		else
-			os << *array;
+		if(lhs){
+			for(IdList::iterator it = lhs->begin(); it != lhs->end(); it++){
+				os << **it << ", ";
+			}
+		}
+		if(array)
+			os << *array << " ";
 		os << " = ";
 		os << *rhs; 
 //		sTabs--;
 	}
 
-	void SetArray(NArrayRef *ary){
-		if(array)
-			children.remove(array);
-		add_child(ary);
-		if(lhs)
-			children.remove(lhs);
-		lhs = 0;
-		array = ary;
-	}
-
 	Node* clone() { return new NAssignment(*this); }
 };
 
-class NBlock : public NExpression {
+class NBlock : public Node {
 public:
 	NBlock() { }
 	//Copy constructor
@@ -556,10 +666,10 @@ public:
 		}
 //		sTabs--;
 	}
-	GType GetType(map<std::string, GType> &locals, GType* ptype, int *found, NExpression* exp) { 
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptype, int *found, Node* exp) { 
 		NodeList::iterator it;
 		for(it = children.begin(); it!= children.end(); it++){
-			GType ret = ((NExpression*)(*it))->GetType(locals,ptype,found,exp);
+			GTypeList ret = ((*it))->GetType(locals,ptype,found,exp);
 			if(*found)
 				return ret;
 		}
@@ -572,30 +682,43 @@ public:
 	}
 };
 
-class NVariableDeclaration : public NExpression {
+class NVariableDeclaration : public Node {
 public:
- 	NType *type;
+ 	TypeList *types;
 	NIdentifier *id;
-	NExpression *assignmentExpr;
-	NVariableDeclaration(NType *type, NIdentifier *id) : type(type), id(id) { add_all_children(); }
-	NVariableDeclaration(NType *type, NIdentifier *id, NExpression *assignmentExpr) : type(type), id(id), assignmentExpr(assignmentExpr) {
+	Node *assignmentExpr;
+	NVariableDeclaration(TypeList *types, NIdentifier *id) : types(types), id(id) { add_all_children(); }
+	NVariableDeclaration(TypeList *types, NIdentifier *id, Node *assignmentExpr) : types(types), id(id), assignmentExpr(assignmentExpr) {
 		add_all_children();
 	}
 	//Copy constructor
 	NVariableDeclaration(const NVariableDeclaration &other){
 		id=0;
 		assignmentExpr=0;
-		type = (NType*)other.type->clone();
-		//cout << *type << ", " << *other.type << "\n";
+		types = 0;
+		if(other.types){
+			types = new TypeList();
+			for(TypeList::iterator it = other.types->begin(); it != other.types->end(); it++){
+				types->push_back((NType*)(*it)->clone());
+			}
+		}
 		if(other.id)
 			id = (NIdentifier*)other.id->clone();
 		if(other.assignmentExpr)
-			assignmentExpr = (NExpression*)other.assignmentExpr->clone();
+			assignmentExpr = other.assignmentExpr->clone();
+
 		add_all_children();
+	}
+	~NVariableDeclaration(){
+		delete types;
 	}
 
 	void add_all_children(){
-		add_child(type);
+		if(types){
+			for(TypeList::iterator it = types->begin(); it != types->end(); it++){
+				add_child(*it);
+			}
+		}
 		if(id)
 			add_child(id);
 		if(assignmentExpr)
@@ -603,37 +726,68 @@ public:
 	}
 
 	llvm::Value* codeGen(CodeGenContext& context);
-	void GetIdRefs(IdList &list) { assignmentExpr->GetIdRefs(list); }
+	void GetIdRefs(IdList &list) { if(assignmentExpr) assignmentExpr->GetIdRefs(list); }
 	void print(ostream& os) { 
 //		os << "Variable decl:\n"; 
 //		sTabs++;
-		os << *type << " ";
+		for(TypeList::iterator it = types->begin(); it != types->end(); it++){
+			os << **it << ", ";
+		}
 		if(id)
-			os << *id;
+			os << " : " << *id;
 		if(assignmentExpr)
 			os << " = " << *assignmentExpr;
 //		sTabs--;
 	}
 
 	void SetType(NType* new_type){
-		children.remove(type);
+		if(types){
+			for(TypeList::iterator it = types->begin(); it != types->end(); it++){
+				children.remove(*it);
+			}
+		}else
+			types = new TypeList();
 		add_child(new_type);
-		type = new_type;
+		types->push_back(new_type);
 	}
 
-	void SetExpr(NExpression* expr){
+	void SetExpr(Node* expr){
 		children.remove(assignmentExpr);
 		if(expr)
 			add_child(expr);
 		assignmentExpr = expr;
 	}
 
-	GType GetType(map<std::string, GType> &locals){ return type->GetType(locals); }
+	GTypeList GetType(map<std::string, GTypeList> &locals){ 
+		GTypeList ret;
+		if(types){
+			for(TypeList::iterator it=types->begin(); it!=types->end(); it++){
+				ret.splice(ret.end(), (*it)->GetType(locals));
+			}
+		}
+		return ret; 
+	}
 
 	Node* clone() { return new NVariableDeclaration(*this); }
 };
 
-class NFunctionDeclaration : public NStatement {
+class NLoop : public Node {
+public:
+	NBlock *block;
+	NLoop(NBlock *block) : block(block) {}		
+	void print(ostream& os) { 
+		os << "for(something){\n";
+		sTabs++;
+		if(block)
+			os << *block;
+		sTabs--;
+		for(int i=0; i < sTabs; i++)
+			os << "\t";
+		os << "}";
+	}
+};
+
+class NFunctionDeclaration : public Node {
 public:
 	NIdentifier *id;
 	VariableList *returns, *arguments;
@@ -642,6 +796,10 @@ public:
 	NFunctionDeclaration(VariableList* returns, NIdentifier* id, VariableList* arguments, NBlock *block) :
 			id(id), returns(returns), arguments(arguments), block(block), isGenerated(0) { 
 		add_all_children();
+	}
+	~NFunctionDeclaration(){
+		delete returns;
+		delete arguments;
 	}
 
 	void add_all_children(){
@@ -730,12 +888,15 @@ public:
 	}
 
 	int isScalar(){
-		for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++)
-			if((*it)->type->isArray)
-				return 0;
+		for(VariableList::iterator it = returns->begin(); it!= returns->end(); it++){
+			for(TypeList::iterator it2 = (*it)->types->begin(); it2 != (*it)->types->end(); it2++)
+				if((*it2)->isArray)
+					return 0;
+		}
 		for(VariableList::iterator it = arguments->begin(); it!= arguments->end(); it++)
-			if((*it)->type->isArray)
-				return 0;
+			for(TypeList::iterator it2 = (*it)->types->begin(); it2 != (*it)->types->end(); it2++)	
+				if((*it2)->isArray)
+					return 0;
 		return 1;
 	}
 
@@ -764,6 +925,14 @@ public:
 		arguments->clear();
 		delete arguments;
 		arguments = 0;
+	}
+
+	GTypeList GetType(map<std::string, GTypeList> &locals){
+		GTypeList ret;
+		for(VariableList::iterator it=returns->begin(); it!=returns->end(); it++){
+			ret.splice(ret.end(), (*it)->GetType(locals));
+		}
+		return ret;
 	}
 };
 
