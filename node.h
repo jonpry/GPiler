@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef NODE_H
 #define NODE_H
 
+#undef NDEBUG
+#include <assert.h>
 #include <iostream>
 #include <vector>
 #include <list>
@@ -334,6 +336,24 @@ public:
 		}
 	}
 
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptypes, int* found, Node* exp){
+//		cout << id->name << "\n";
+		assert(locals.find(id->name) != locals.end());
+		GTypeList types = locals[id->name];
+		assert(types.size());
+//		cout << types.size();
+		for(GTypeList::iterator it=types.begin(); it!=types.end(); it++){
+			(*it).print();
+		}
+		if(exp == this){
+			*found = 1;
+			*ptypes = types;
+			return *ptypes;
+		}
+
+		return types;
+	}
+
 	void print(ostream& os) { 
 //		os << "MethodCall:\n";
 //		sTabs++;
@@ -472,6 +492,8 @@ public:
 	}
 
 	GTypeList GetType(map<std::string, GTypeList> &locals);
+
+	void GetIdRefs(IdList &list) { lhs->GetIdRefs(list); rhs->GetIdRefs(list); }
 
 	Node* clone(){ return new NBinaryOperator(*this); }
 };
@@ -687,7 +709,7 @@ public:
  	TypeList *types;
 	NIdentifier *id;
 	Node *assignmentExpr;
-	NVariableDeclaration(TypeList *types, NIdentifier *id) : types(types), id(id) { add_all_children(); }
+	NVariableDeclaration(TypeList *types, NIdentifier *id) : types(types), id(id), assignmentExpr(0) { add_all_children(); }
 	NVariableDeclaration(TypeList *types, NIdentifier *id, Node *assignmentExpr) : types(types), id(id), assignmentExpr(assignmentExpr) {
 		add_all_children();
 	}

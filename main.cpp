@@ -489,33 +489,29 @@ int main(int argc, char **argv)
 	std::cout << *programBlock << endl;
 
 	rewrite_pipelines(programBlock);
-	cout << "Pass3:\n";
+	cout << "Pass2:\n";
 	cout << *programBlock;
 
 //TODO: it's impossible to guarantee all declaration have assignment with zip shits
-//	remove_empty_decls(programBlock);
-//	cout << "Pass4:\n";
-//	cout << *programBlock;
 
 	to_ssa(programBlock);
-	cout << "Pass5:\n";
+	cout << "Pass3:\n";
 	cout << *programBlock;
 
 //	split_unnatural(programBlock);
-	cout << "Pass6:\n";
+	cout << "Pass4:\n";
 //	cout << *programBlock;
 
-//TODO: change this pass
 	remove_array_temps(programBlock);
-	cout << "Pass2:\n";
+	cout << "Pass5:\n";
 	std::cout << *programBlock << endl;
 
 	rewrite_triads(programBlock);
-	cout << "Pass7:\n";
+	cout << "Pass6:\n";
 	cout << *programBlock;
 
 	rewrite_argument_access(programBlock);
-	cout << "Pass8:\n";
+	cout << "Pass7:\n";
 	cout << *programBlock;
 
 	/////////////////////////////////////////////////////////
@@ -523,7 +519,7 @@ int main(int argc, char **argv)
 //	generate_runtime(programBlock,runtime);
 
 	rewrite_arrays(programBlock);
-	cout << "Pass9:\n";
+	cout << "Pass8:\n";
 	cout << *programBlock;
 
 #if 1

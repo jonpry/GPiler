@@ -42,10 +42,12 @@ GTypeList GetType(NBlock *pb, Node *exp){
 		NodeList::iterator it;
 		for(it=pb->children.begin(); it!= pb->children.end(); it++){
 			if(*it != parent){
-				NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*>(parent);
+				NFunctionDeclaration *func = dynamic_cast<NFunctionDeclaration*>(*it);
 				if(!func)
 					continue;
+//				cout << func->id->name << ", " << pb->children.size() << "\n";
 				locals[func->id->name] = func->GetType(locals); 
+//				cout << locals[func->id->name].size() << "\n";
 			}
 		}
 	}
@@ -220,7 +222,10 @@ GTypeList NType::GetType(map<std::string, GTypeList> &locals){
 		ret.type = BOOL_TYPE; ret.length = 1;
 	}else if (name.compare("void") == 0) {
 		ret.type = VOID_TYPE; ret.length = 0;
-	} else cout << "Error unknown type\n";
+	} else {
+		cout << "Error unknown NType " << name << "\n";
+		exit(-1);
+	}
 	ret.isArray = isArray;
 	ret.isPointer = isPointer;
 	return GTypeList{ret};

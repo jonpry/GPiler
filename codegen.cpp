@@ -111,8 +111,10 @@ static Type *typeOf(GType type)
 		ret = Type::getInt8Ty(getGlobalContext());
 	}else if (type.type == VOID_TYPE) {
 		ret = Type::getVoidTy(getGlobalContext());
-	} else cout << "Error unknown type\n";
-
+	} else {
+		cout << "Error unknown GType\n";	
+		exit(-1);
+	}
 	return ret;
 }
 
