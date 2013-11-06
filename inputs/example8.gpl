@@ -1,11 +1,12 @@
 
-double foo : foo_func(double x, double y){
-	foo = x + y;
+double foo1, double foo2 : foo_func(double x, double y){
+	foo1 = x + y;
+	foo2 = x - y;
 }
 
-[double] xp, [double] yp, [double] zp : mapit([double] x, [double] y){
+[double] xp, [double] yp, [double] zp, [double] wp : mapit([double] x, [double] y){
 	[double] temp;
 	x,y :: map(x,y : x + y, x + 1) > xp, temp;
 	temp :: map(x : x + 2) > yp;
-	temp,y :: map(x,y : foo_func(x,y)) > zp;
+	temp,y :: map(x,y : foo_func(x,y)) > zp,wp;
 }

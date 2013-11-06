@@ -75,7 +75,7 @@ std::string create_temp_name(void) {
 	return std::string(buf);
 }
 
-//TODO: this is all wrong, doesn't support multiple parameters
+//create the anonymous function using all of our awesome tricks
 NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,TypeList* types) {
 	VariableList *var_list = new VariableList;
 	// turn ids into vars
@@ -96,16 +96,37 @@ NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,TypeList* types) {
 	{
 		NodeList::iterator it;
 		int count=0;
+		//TODO: detect order of function recursively
 		for(it=map->exprs->begin(); it!= map->exprs->end(); it++){
-			char ret_name[64];
-			sprintf(ret_name,"return.%d",count++);
-			NIdentifier *id = new NIdentifier(ret_name);
-			//Don't set type for now, do it after the function is setup
-			NVariableDeclaration *vardec = new NVariableDeclaration(0,(NIdentifier*)id->clone());
-			retlist->push_back(vardec);
+			//TODO: ideally we would support this by querying the return type of the expression
+			//however that doesn't work until after the expression is a child of function which is not created
+			//yet
+			NMethodCall *mc = dynamic_cast<NMethodCall*>(*it);
+			if(mc){
+				TypeList types = typeOf(mc->id->name,pb);
+				IdList *idlist = new IdList();
+				for(TypeList::iterator it2=types.begin(); it2!=types.end(); it2++){
+					char ret_name[64];
+					sprintf(ret_name,"return.%d",count++);
+					NIdentifier *id = new NIdentifier(ret_name);
 
-			NAssignment *assignment = new NAssignment(new IdList{id}, *it);
-			func_block->add_child(assignment);
+					retlist->push_back(new NVariableDeclaration(0,id));
+					idlist->push_back((NIdentifier*)id->clone());
+				}
+				NAssignment *assignment = new NAssignment(idlist, mc);
+				func_block->add_child(assignment);
+			}else{
+				//Don't set type for now, do it after the function is setup
+				char ret_name[64];
+				sprintf(ret_name,"return.%d",count++);	
+				NIdentifier *id = new NIdentifier(ret_name);
+
+				NVariableDeclaration *vardec = new NVariableDeclaration(0,(NIdentifier*)id->clone());
+				retlist->push_back(vardec);
+
+				NAssignment *assignment = new NAssignment(new IdList{id}, *it);
+				func_block->add_child(assignment);
+			}
 		}
 	}
 	std::string anon_name = create_anon_name();
@@ -122,14 +143,21 @@ NFunctionDeclaration *extract_func(NBlock* pb, NMap* map,TypeList* types) {
 	{
 		VariableList::iterator it;	
 		NodeList::iterator it2;
-		for(it=anon_func->returns->begin(), it2=anon_func->block->children.begin(); it!=anon_func->returns->end(); it++, it2++){
-			Node *rhs = ((NAssignment*)*it2)->rhs;
-			GTypeList foo = GetType(pb,rhs);
-			NType* type = (*foo.begin()).toNode();
-			type->isArray=0;
-			(*it)->SetType(type);
+		for(it=anon_func->returns->begin(), it2=anon_func->block->children.begin(); it!=anon_func->returns->end(); it2++){
+			NAssignment* assn = dynamic_cast<NAssignment*>(*it2);
+			if(assn){
+				Node *rhs = ((NAssignment*)*it2)->rhs;
+				GTypeList foo = GetType(pb,rhs);
+				for(GTypeList::iterator it3=foo.begin(); it3 != foo.end(); it3++){
+					NType* type = (*it3).toNode();
+					type->isArray=0;
+					(*it)->SetType(type);
+					it++;
+				}
+			}
 		}
 	}
+	cout << "done\n";
 	//////////////////////////
 
 	return anon_func;
@@ -331,12 +359,30 @@ void to_ssa(NBlock *pb){
 	}
 }
 
-void map_to_args(NIdentifier *dest, NodeList *list, NMap *map){
-	if(map->exprs->size() == 1){
+int number_of_args(NMap *map, NBlock *pb){
+	int ret=0;
+	for(NodeList::iterator it = map->exprs->begin(); it!=map->exprs->end(); it++){
+		NMethodCall *mc = dynamic_cast<NMethodCall*>(*it);
+		if(mc){
+			TypeList types = typeOf(mc->id->name,pb);
+			ret += types.size();
+		}else
+			ret++;
+	}
+
+//	cout << ret << "\n";
+
+	return ret;
+}
+
+void map_to_args(NIdentifier *dest, NodeList *list, NMap *map, NBlock* pb){
+	//TODO: higher order expressions
+	int nargs = number_of_args(map,pb);
+	if(nargs == 1){
 		list->push_back(new NRef(dest));
 	}else{
 		int count = 0;
-		for(NodeList::iterator it = map->exprs->begin(); it!=map->exprs->end(); it++){
+		for(int i=0; i < nargs; i++){
 			char new_name[64];
 			sprintf(new_name, "%s.%d", dest->name.c_str(), count++);
 			list->push_back(new NRef(new NIdentifier(new_name)));
@@ -382,7 +428,7 @@ void rewrite_triads(NBlock *pb){
 					NMap* map = dynamic_cast<NMap*>(assn->rhs);
 					if(map){
                                                 NodeList *args = new NodeList();
-						map_to_args(*assn->lhs->begin(),args,map);
+						map_to_args(*assn->lhs->begin(),args,map,pb);
 
 						NMethodCall *mc = new NMethodCall(new NIdentifier(map->anon_name),args);
 						decl->block->add_child(it2,mc);
