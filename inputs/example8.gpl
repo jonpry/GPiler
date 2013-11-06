@@ -1,4 +1,4 @@
-
+(* demonstrates use of function call in an anonymous function *)
 double foo1, double foo2 : foo_func(double x, double y){
 	foo1 = x + y;
 	foo2 = x - y;
