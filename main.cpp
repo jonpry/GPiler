@@ -256,7 +256,6 @@ void rewrite_argument_access(NBlock *pb){
 					}
 					NIdentifier* id= dynamic_cast<NIdentifier*>(assn->rhs);
 					if(id){
-						cout << id->name << "\n";
 						NType* type = *typeOf(decl,id,1).begin();
 						if(type->isArray){
 							assn->SetExpr(new NArrayRef(id,new NIdentifier("idx")));
@@ -419,6 +418,19 @@ void rewrite_triads(NBlock *pb){
 							NAssignment *new_assn = new NAssignment(new IdList{*it3},new NIdentifier(new_name));
 							decl->block->add_child(it2,new_assn);
 						}
+						it2 = decl->block->children.erase(it2);
+						continue;
+					}
+
+					NMethodCall* mc = dynamic_cast<NMethodCall*>(assn->rhs);
+					if(mc){
+						//TODO: fix me
+						assn->lhs->reverse();
+						for(IdList::iterator it3 = assn->lhs->begin(); it3!= assn->lhs->end(); it3++){
+							mc->AddArgumentFront(new NRef(*it3));
+						}
+						decl->block->add_child(it2,mc);
+
 						it2 = decl->block->children.erase(it2);
 						continue;
 					}

@@ -90,6 +90,11 @@ public:
 		exit(-1);
 	}
 
+	virtual llvm::Value* declGen(CodeGenContext& context) {
+		cout << "Unknown declgen: " << typeid(*this).name() << "\n";
+		exit(-1);
+	}
+
 	NodeList children;
 	Node *parent;
 
@@ -173,6 +178,7 @@ public:
 	GTypeList GetType(map<std::string, GTypeList> &locals) { return GTypeList{GType(INT_TYPE,32,0)};}
 
 	Node* clone() { return new NInteger(*this); }
+	void GetIdRefs(IdList &list) {}
 };
 
 class NDouble : public Node {
@@ -184,6 +190,7 @@ public:
 	GTypeList GetType(map<std::string, GTypeList> &locals) { return GTypeList{GType(FLOAT_TYPE,64,0)};}
 
 	Node* clone() { return new NDouble(*this); }
+	void GetIdRefs(IdList &list) {}
 };
 
 // name for a variable or function which is unique in its scope.
@@ -352,6 +359,11 @@ public:
 		}
 
 		return types;
+	}
+
+	void AddArgumentFront(Node *node){
+		add_child(node);
+		arguments->push_front(node);
 	}
 
 	void print(ostream& os) { 
@@ -677,6 +689,8 @@ public:
 	}
 
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+	virtual llvm::Value* declGen(CodeGenContext& context);
+
 	void print(ostream& os) { 
 //		os << "Block: \n"; 
 //		sTabs++;
@@ -862,6 +876,8 @@ public:
 	}
 
 	virtual llvm::Value* codeGen(CodeGenContext& context);
+	virtual llvm::Value* declGen(CodeGenContext& context);
+
 	void print(ostream& os) { 
 		VariableList::iterator it;
 		if(returns){

@@ -30,6 +30,7 @@ void CodeGenContext::generateCode(NBlock& root)
 {
 	std::cout << "Generating code...\n";
 
+	root.declGen(*this); /* declare all functions */
 	root.codeGen(*this); /* emit bytecode for the toplevel block */
 
 	/* Print the bytecode in a human-readable format
@@ -147,6 +148,9 @@ Value* NRef::codeGen(CodeGenContext& context){
 	if(context.locals().find(exp->name) == context.locals().end()){
 		cout << "Error\n";
 	}
+	GType type = *exp->GetType(context.localTypes()).begin();
+	if(type.isPointer)
+		return exp->codeGen(context);
 	return context.locals()[exp->name];
 }
 
@@ -326,6 +330,17 @@ Value* NBlock::codeGen(CodeGenContext& context)
 	return last;
 }
 
+Value* NBlock::declGen(CodeGenContext& context)
+{
+	Value *last = NULL;
+	for (NodeList::const_iterator it = children.begin(); it != children.end(); it++) {
+		std::cout << "Generating code for " << typeid(**it).name() << endl;
+		last = (**it).declGen(context);
+	}
+	std::cout << "Creating block" << endl;
+	return last;
+}
+
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	std::cout << "Creating variable declaration " << (*types->begin())->name << " " << id->name << endl;
@@ -387,9 +402,7 @@ void addKernelMetadata(llvm::Function *F) {
   MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
 }
  
-
-Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
-{
+Value* NFunctionDeclaration::declGen(CodeGenContext& context){
 	vector<Type*> argTypes;
 	VariableList::const_iterator it;
 	for (it = arguments->begin(); it != arguments->end(); it++) {
@@ -397,11 +410,21 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	}
 
 	FunctionType *ftype = FunctionType::get(typeOf(returns->front()), makeArrayRef(argTypes), false);
-	Function *function = Function::Create(ftype, isGenerated?GlobalValue::InternalLinkage:GlobalValue::ExternalLinkage, id->name.c_str(), context.module);
-	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
-
+	Function *function = Function::Create(ftype, (isGenerated||isScalar())?GlobalValue::InternalLinkage:GlobalValue::ExternalLinkage, id->name.c_str(), context.module);
 	addKernelMetadata(function);
 
+	return function;
+}
+
+Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
+{
+	VariableList::const_iterator it;
+	Function *function = context.module->getFunction(id->name.c_str());
+	if (function == NULL) {
+		std::cerr << "no such function " << id->name << endl;	
+	}
+
+	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 	context.pushBlock(bblock);
 
 	if(id->name == "main")
