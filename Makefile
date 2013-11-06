@@ -5,8 +5,8 @@ OBJS = 	parser.o \
        	tokens.o \
 	codegen.o \
 	types.o \
-	compile.o
-#	corefn.o \
+	compile.o \
+	corefn.o 
 #	runtime.o \
 #	SplitFuncs.o
 

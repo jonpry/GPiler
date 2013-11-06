@@ -1,0 +1,62 @@
+(* process vectors of options on GPU *)
+
+double x : sqrt(double y){
+	x = y;
+}
+
+double x : log(double y){
+	x = y;
+}
+
+double x : exp(double y){
+	x = y;
+}
+
+double x : abs(double y){
+	x = (y>0)?y:0.0-y;
+}
+
+(* cumulative normal distribution function *)
+double ret : cnd(double d){
+    double   	 A1 = 0.31938153;
+    double    	 A2 = 0.0-0.356563782;
+    double    	 A3 = 1.781477937;
+    double     	 A4 = 0.0-1.821255978;
+    double	 A5 = 1.330274429;
+    double RSQRT2PI = 0.39894228040143267793994605993438;
+
+    double absD = abs(d);
+    double K = 1.0 / (1.0 + 0.2316419 * absD);
+    double expD = exp((0.0-0.5) * d * d);
+    double cnd = RSQRT2PI * expD * (K * (A1 + K * (A2 + K * (A3 + K * (A4 + K * A5)))));
+
+    ret = (d > 0) ? 1.0 - cnd : cnd; 
+}
+
+(* scalar function to compute black scholes *)
+double call, double put : black_scholes_single(double stock, double strike, double years, double riskfree, double volatility){
+   	double sqrt_years;
+	double expRT;
+    	double d1;
+	double d2;
+	double CNDD1;
+	double CNDD2;
+	double logS;
+
+    	sqrt_years = sqrt(years);
+	logS = log(stock / strike);
+    	d1 = (logS + (riskfree + 0.5 * volatility * volatility) * years) / (volatility * sqrt_years);
+    	d2 = d1 - volatility * sqrt_years;
+
+    	CNDD1 = cnd(d1);
+    	CNDD2 = cnd(d2);
+
+    	expRT = exp((0.0 - riskfree) * years);
+    	call = stock * CNDD1 - strike * expRT * CNDD2;
+    	put  = strike * expRT * (1.0 - CNDD2) - stock * (1.0 - CNDD1);
+}
+
+(* teh kernel *)
+[double] calls, [double] puts : black_scholes([double] stocks, [double] strikes, [double] years, double riskfree, double volatility){
+	stocks,strikes,years,riskfree,volatility :: map(a,b,c,d,e : black_scholes_single(a,b,c,d,e)) > calls,puts;
+}

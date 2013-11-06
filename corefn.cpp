@@ -92,7 +92,11 @@ ReturnInst::Create(getGlobalContext(), bblock);
 context.popBlock();
 }
 
+//declare double    @llvm.sqrt.f64(double %Val)
+
 void createCoreFunctions(CodeGenContext& context){
-llvm::Function* printfFn = createPrintfFunction(context);
-    createEchoFunction(context, printfFn);
+	llvm::Function* printfFn = createPrintfFunction(context);
+    	createEchoFunction(context, printfFn);
+
+//	createSqrtFn
 }

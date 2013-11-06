@@ -343,15 +343,20 @@ public:
 		}
 	}
 
-	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptypes, int* found, Node* exp){
-//		cout << id->name << "\n";
-		assert(locals.find(id->name) != locals.end());
+	GTypeList GetType(map<std::string, GTypeList> &locals){
+//		cout << id->name << "\n";	
+		if(locals.find(id->name) == locals.end()){
+			cout << id->name << "\n";
+			assert(0);
+		}
 		GTypeList types = locals[id->name];
 		assert(types.size());
 //		cout << types.size();
-		for(GTypeList::iterator it=types.begin(); it!=types.end(); it++){
-			(*it).print();
-		}
+		return types;
+	}
+
+	GTypeList GetType(map<std::string, GTypeList> &locals, GTypeList* ptypes, int* found, Node* exp){
+		GTypeList types = GetType(locals);
 		if(exp == this){
 			*found = 1;
 			*ptypes = types;
@@ -543,15 +548,18 @@ public:
 		return GetType(locals);	
 	}
 
+	void GetIdRefs(IdList &list) { 
+		pred->GetIdRefs(list);
+		yes->GetIdRefs(list);
+		no->GetIdRefs(list); 
+	}
+
 	GTypeList GetType(map<std::string, GTypeList> &locals);
 
 	void print(ostream& os) { 
-		os << "Select:\n";
-		sTabs++;
-		os << *pred;
-		os << *yes;
+		os << *pred << "?";
+		os << *yes << ":";
 		os << *no;
-		sTabs--;
 	}
 };
 
